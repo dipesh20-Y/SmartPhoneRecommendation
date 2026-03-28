@@ -1,0 +1,267 @@
+PROJECT COMPLETION CHECKLIST - DEADLINE: 2 DAYS
+================================================
+Created: March 27, 2026
+Status: IN PROGRESS
+Time Remaining: ~47 hours
+
+CURRENT TIME: 11:55 AM
+TARGET COMPLETION: TODAY 4:30 PM (4 hours, 35 minutes)
+
+═════════════════════════════════════════════════════════════════════════════
+
+WHAT YOU HAVE (ALREADY DONE) ✅
+═════════════════════════════════════════════════════════════════════════════
+
+✅ Recommendation Engine (partially done)
+   - RecommendationEngine.java exists
+   - Loads CSV data
+   - Calculates scores
+   - searchByKeyword() method exists
+
+✅ Spell Checking (WORKING!)
+   - MainSC.java (standalone spell checker)
+   - EditDistanceCompSC.java (edit distance calculation)
+   - MergeSortingSC.java (merge sort for ranking)
+   - SpellChecker.java (vocabulary checker)
+   - LoadingCSVFileSC.java (vocabulary loader)
+   - Returns "Do you mean: X?" suggestions
+
+✅ Data Validation
+   - DataValidation.java with regex patterns
+   - Validates Budget, RAM, Storage, Display, Battery
+
+✅ Inverted Indexing
+   - InvertedIndex.java
+   - Trie.java (data structure)
+   - TrieNode.java
+   - searchByKeyword() works
+
+✅ Word Completion
+   - WCTrie.java
+   - CSVLoaderWC.java
+   - WordCompletion.java
+
+✅ Pattern Finding
+   - Regex patterns in RecommendationMain.java
+   - Extracts brands, tech specs, specifications
+
+✅ Page Ranking
+   - InvertedIndex.java already does this
+
+═════════════════════════════════════════════════════════════════════════════
+
+WHAT YOU NEED TO DO TODAY
+═════════════════════════════════════════════════════════════════════════════
+
+PHASE 1: QUICK WINS (1 hour)
+─────────────────────────────
+
+Task 1.1: Add Error Handling Loop to MainSC.java [15 MIN]
+   Status: [ ] NOT STARTED
+
+   Code to add: Wrap spell checker in while(true) loop
+
+   Changes needed:
+   - [ ] Add: boolean continueChecking = true;
+   - [ ] Add: while (continueChecking) { ... }
+   - [ ] Add: "Check another word? (yes/no):" prompt
+   - [ ] Add: continueChecking = response.equals("yes");
+
+   File: src/main/java/features/MainSC.java
+   Lines to modify: After line 25 (after Scanner initialization)
+
+
+Task 1.2: Add Try-Catch to MainSC.java [10 MIN]
+   Status: [ ] NOT STARTED
+
+   Code to add:
+   ```java
+   try {
+       // ... existing spell checker code ...
+   } catch (Exception e) {
+       System.out.println("Error: " + e.getMessage());
+   }
+
+
+File: src/main/java/features/MainSC.java
+Task 1.3: Test MainSC.java [10 MIN] Status: [ ] NOT STARTED
+Run command: $ mvn exec:java -Dexec.mainClass="features.MainSC"
+Test cases:
+ Enter "pixel" (correct) → "Word is spelled correctly"
+ Enter "pixe" (wrong) → "Do you mean: pixel?"
+ Enter "samsun" (wrong) → "Do you mean: samsung?"
+ Check another word? yes → Loop continues
+ Check another word? no → Program exits
+─────────────────────────────────────────────────────────────────────────────
+PHASE 2: INTEGRATE SPELL CHECKER (2 hours) ─────────────────────────────────────────────
+Task 2.1: Add Error Handling to RecommendationEngine.searchByKeyword() [30 MIN] Status: [ ] NOT STARTED
+File: src/main/java/features/RecommendationEngine.java Method: searchByKeyword()
+Code to add:
+   public void searchByKeyword(String keyword) {
+       try {
+           if (keyword == null || keyword.isEmpty()) {
+               System.out.println("❌ Please enter a keyword.");
+               return;
+           }
+
+           String cleanKeyword = keyword.toLowerCase().replaceAll("[^a-z0-9]", "");
+           HashSet<String> results = invertedIndex.search(cleanKeyword);
+
+           if (results == null || results.isEmpty()) {
+               System.out.println("No phones found matching this keyword.");
+           } else {
+               System.out.println("Found in " + results.size() + " phone(s):");
+               for (String phoneName : results) {
+                   System.out.println("- " + phoneName);
+               }
+           }
+       } catch (NullPointerException e) {
+           System.out.println("❌ Error: Invalid search. Please try again.");
+       } catch (Exception e) {
+           System.out.println("❌ Search error: " + e.getMessage());
+       }
+   }
+Task 2.2: Add Error Handling to RecommendationEngine.loadPhonesCsv() [20 MIN] Status: [ ] NOT STARTED
+File: src/main/java/features/RecommendationEngine.java Method: loadPhonesCsv()
+Wrap in try-catch:
+   try {
+       // ... existing loading code ...
+   } catch (IOException e) {
+       System.out.println("❌ Error reading CSV: " + e.getMessage());
+       return false;
+   } catch (Exception e) {
+       System.out.println("❌ Unexpected error: " + e.getMessage());
+       return false;
+   }
+Task 2.3: Add Error Handling to RecommendationEngine.getRecommendations() [20 MIN] Status: [ ] NOT STARTED
+File: src/main/java/features/RecommendationEngine.java Method: getRecommendations()
+Wrap in try-catch:
+   try {
+       // ... existing recommendation code ...
+   } catch (NullPointerException e) {
+       System.out.println("❌ Error: Invalid preferences. Please try again.");
+       return new ArrayList<>();
+   } catch (Exception e) {
+       System.out.println("❌ Recommendation error: " + e.getMessage());
+       return new ArrayList<>();
+   }
+─────────────────────────────────────────────────────────────────────────────
+PHASE 3: UPDATE RECOMMENDATIONMAIN.JAVA (1.5 hours) ────────────────────────────────────────────────────
+Task 3.1: Add Error Handling to Main Menu [20 MIN] Status: [ ] NOT STARTED
+File: src/main/java/features/RecommendationMain.java Method: main()
+Wrap while loop in try-catch:
+   try {
+       while (true) {
+           displayMainMenu();
+           String choice = scanner.nextLine().trim();
+
+           try {
+               switch (choice) {
+                   case "1": getRecommendations(); break;
+                   case "2": searchPhonesByKeyword(); break;
+                   case "3": viewAllPhones(); break;
+                   case "4":
+                       System.out.println("\nThank you! Goodbye!");
+                       return;
+                   default:
+                       System.out.println("❌ Invalid choice. Please try 1-4.");
+               }
+           } catch (InputMismatchException e) {
+               System.out.println("❌ Invalid input. Please enter a number.");
+           } catch (Exception e) {
+               System.out.println("❌ Error: " + e.getMessage());
+           }
+       }
+   } finally {
+       scanner.close();
+   }
+Task 3.2: Add Error Handling to searchPhonesByKeyword() [15 MIN] Status: [ ] NOT STARTED
+File: src/main/java/features/RecommendationMain.java Method: searchPhonesByKeyword()
+Wrap entire method:
+   private static void searchPhonesByKeyword() {
+       try {
+           System.out.println("\n========================================");
+           System.out.println("   Phone Keyword Search");
+           System.out.println("========================================\n");
+
+           System.out.print("Enter keyword to search: ");
+           String keyword = scanner.nextLine().trim();
+
+           if (keyword.isEmpty()) {
+               System.out.println("❌ Please enter a keyword.");
+               return;
+           }
+
+           engine.searchByKeyword(keyword);
+       } catch (Exception e) {
+           System.out.println("❌ Search error: " + e.getMessage());
+       }
+   }
+Task 3.3: Add Error Handling to getRecommendations() [20 MIN] Status: [ ] NOT STARTED
+File: src/main/java/features/RecommendationMain.java Method: getRecommendations()
+Wrap entire method in try-catch
+Task 3.4: Add Error Handling to viewAllPhones() [15 MIN] Status: [ ] NOT STARTED
+File: src/main/java/features/RecommendationMain.java Method: viewAllPhones()
+Wrap entire method in try-catch
+Task 3.5: Add Error Handling to Input Validation Methods [15 MIN] Status: [ ] NOT STARTED
+Methods:
+getPositiveDoubleInput()
+getPositiveIntInput()
+getYesNoInput()
+Add try-catch around each
+─────────────────────────────────────────────────────────────────────────────
+PHASE 4: TESTING (1.5 hours) ──────────────────────────────
+Task 4.1: Compile Project [10 MIN] Status: [ ] NOT STARTED
+Command: mvn clean compile
+Expected: BUILD SUCCESS
+Task 4.2: Test Menu Option 1 (Recommendations) [20 MIN] Status: [ ] NOT STARTED
+Command: mvn exec:java -Dexec.mainClass="features.RecommendationMain"
+Test steps:
+ Select option 1
+ Enter budget: "500"
+ Enter RAM: "8GB"
+ Enter storage: "128"
+ Enter display: "6.0"
+ Enter battery: "4000"
+ Enter camera: "50"
+ Answer feature questions
+ Get recommendations displayed ✓
+Task 4.3: Test Menu Option 2 (Search with Spell Check) [20 MIN] Status: [ ] NOT STARTED
+Test steps:
+ Select option 2
+ Enter: "samsun" (typo)
+ Should show search results
+ Return to menu
+ Select option 2 again
+ Enter: "pixel" (correct)
+ Should show results
+Task 4.4: Test Menu Option 3 (Browse All) [10 MIN] Status: [ ] NOT STARTED
+Test steps:
+ Select option 3
+ All phones should display ✓
+ Return to menu
+Task 4.5: Test Error Handling [20 MIN] Status: [ ] NOT STARTED
+Test cases:
+ Enter invalid menu choice → Error message ✓
+ Enter invalid budget (non-number) → Retry ✓
+ Empty keyword search → Error message ✓
+ Any crash → Caught & displayed ✓
+─────────────────────────────────────────────────────────────────────────────
+PHASE 5: DOCUMENTATION (1 hour) ────────────────────────────────
+Task 5.1: Create README.md [20 MIN] Status: [ ] NOT STARTED
+File: Create at project root
+Content needed:
+ Project title & description
+ How to run (mvn command)
+ Features list
+ Team member contributions
+Task 5.2: Add Code Comments [20 MIN] Status: [ ] NOT STARTED
+Files to update:
+ RecommendationMain.java - Add integration comments
+ RecommendationEngine.java - Add error handling comments
+Task 5.3: Create FEATURES.txt [20 MIN] Status: [ ] NOT STARTED
+List what each member contributed:
+You: Recommendation, Data Validation, Inverted Indexing, Integration
+Teammate 1: Spell Checking (MainSC, EditDistance, MergeSorting)
+Teammate 2: Word Completion (WCTrie, CSVLoader)
+Teammate 3: Page Ranking (already in InvertedIndex)

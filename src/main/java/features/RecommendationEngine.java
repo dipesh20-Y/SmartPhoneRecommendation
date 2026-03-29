@@ -170,6 +170,14 @@ public class RecommendationEngine {
                     count++,
                     rr.phone.getName(),
                     rr.rawFrequency);
+
+            // Display URL if available
+            if (rr.phone.getUrl() != null && !rr.phone.getUrl().isEmpty()) {
+                System.out.println("    URL: " + rr.phone.getUrl());
+            } else {
+                System.out.println("    No URL available");
+            }
+            System.out.println();
         }
 
         return true;

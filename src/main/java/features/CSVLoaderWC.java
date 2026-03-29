@@ -32,7 +32,7 @@ public class CSVLoaderWC {
                     continue; // skip blank lines
                 }
 
-                // Split the row into columns. Our Combined_phone.csv has no quoted commas,
+                // Split the row into columns. Our final_combined_phones.csv has no quoted commas,
                 // so simple split is sufficient here.
                 String[] columns = line.split(",", -1);
 

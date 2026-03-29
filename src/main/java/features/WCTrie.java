@@ -7,7 +7,6 @@ import java.util.Map;
 /**
  * TrieDictionary implements a prefix tree used for
  * fast word lookup and auto-completion.
- *
  * Words are stored character by character.
  * This allows efficient prefix based searching.
  */

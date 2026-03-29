@@ -5,24 +5,24 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * RecommendationEngine is the core system for recommending smartphones
- * based on user preferences. It loads phone data from CSV, applies scoring
- * algorithms, and returns ranked recommendations.
+ * RecommendationEngine.java does following tasks:
+ * - Loads all records from CSV into Trie
+ * - Frequency Count: Counts ALL occurrences of the word (duplicates increase count)
+ * - Page Ranking: Phones are ranked by how many times the keyword appears
+ * - Provides smartphone with page ranking based on keyword searched
  */
 public class RecommendationEngine {
 
-    private List<PhoneData> allPhones;
-    private Trie invertedIndex;
+    private final List<PhoneData> allPhones = new ArrayList<>();
+    private final Trie invertedIndex = new Trie();
 
-    // Scoring weights (can be adjusted)
+    // Scoring weights (original values)
     private static final double BUDGET_WEIGHT = 0.20;
     private static final double RAM_WEIGHT = 0.15;
     private static final double STORAGE_WEIGHT = 0.10;
@@ -31,21 +31,13 @@ public class RecommendationEngine {
     private static final double DISPLAY_WEIGHT = 0.10;
     private static final double FEATURE_WEIGHT = 0.10;
 
-    // Regex patterns for parsing specifications
-    private static final Pattern PRICE_PATTERN = Pattern.compile("\\$(\\d+(?:\\.\\d{2})?)");
+    // Regex patterns (original)
     private static final Pattern CAMERA_MP_PATTERN = Pattern.compile("(\\d+)");
-    private static final Pattern BATTERY_PATTERN = Pattern.compile("(\\d+)");
-    private static final Pattern DISPLAY_PATTERN = Pattern.compile("(\\d+(?:\\.\\d+)?)");
-    private static final Pattern RAM_PATTERN = Pattern.compile("(\\d+)GB\\s*RAM");
-    private static final Pattern STORAGE_PATTERN = Pattern.compile("(\\d+)GB");
 
-    public RecommendationEngine() {
-        this.allPhones = new ArrayList<>();
-        this.invertedIndex = new Trie();
-    }
+    public RecommendationEngine() {}
 
     /**
-     * Load phones from CSV file and populate the data structures
+     * Loads phone data from CSV file
      */
     public boolean loadPhonesCsv(String csvFilePath) {
         try (BufferedReader br = new BufferedReader(new FileReader(csvFilePath));
@@ -54,474 +46,135 @@ public class RecommendationEngine {
                      .withIgnoreEmptyLines(true))) {
 
             int phoneCount = 0;
+
             for (CSVRecord record : parser) {
                 try {
                     PhoneData phone = new PhoneData();
 
-                    // Parse basic info
+                    // Basic fields
                     phone.setName(record.get("Brand") + " " + record.get("Model"));
                     phone.setOs(record.get("OS"));
                     phone.setChipset(record.get("Processor"));
                     phone.setCpu(record.get("Processor"));
                     phone.setDisplayType(record.get("DisplaySize"));
                     phone.setDisplaySize(Double.parseDouble(record.get("DisplaySize")));
-                    phone.setResolution("");
                     phone.setMainCamera(record.get("CameraMP"));
-                    phone.setCameraFeatures("");
-                    phone.setCameraVideo("");
                     phone.setSelfieCamera(record.get("FrontCameraMP"));
                     phone.setHeadphoneJack(parseYesNo(record.get("HeadphoneJack")));
-                    phone.setLoudspeaker(true);
-                    phone.setWlan("");
-                    phone.setBluetooth("");
-                    phone.setSensors("");
                     phone.setBatteryMah(Integer.parseInt(record.get("Battery")));
-                    phone.setCharging("");
                     phone.setPrice(Double.parseDouble(record.get("Price")));
-                    phone.setDimensions("");
-                    phone.setWeight(0);
                     phone.setWaterResistance(record.get("WaterResistance"));
                     phone.setUrl(record.get("URL"));
                     phone.setRamStorage(record.get("RAM"));
 
-                    // Parse RAM and Storage directly from CSV columns
-                    try {
-                        int ram = Integer.parseInt(record.get("RAM"));
-                        phone.setRamGb(ram);
-                    } catch (Exception e) {
-                        phone.setRamGb(0);
-                    }
+                    // Safe parsing for numeric fields
+                    try { phone.setRamGb(Integer.parseInt(record.get("RAM"))); } catch (Exception e) { phone.setRamGb(0); }
+                    try { phone.setStorageGb(Integer.parseInt(record.get("Storage"))); } catch (Exception e) { phone.setStorageGb(0); }
 
-                    try {
-                        int storage = Integer.parseInt(record.get("Storage"));
-                        phone.setStorageGb(storage);
-                    } catch (Exception e) {
-                        phone.setStorageGb(0);
-                    }
-
-                    phone.setNetwork("");
+                    // Important fields for Frequency Count & Page Ranking
+                    phone.setSpecSummary(record.get("SpecsSummary") != null ? record.get("SpecsSummary").trim() : "");
+                    phone.setDescription(record.get("Description") != null ? record.get("Description").trim() : "");
 
                     allPhones.add(phone);
-
-                    // Add to inverted index for keyword searching
                     indexPhoneInTrie(phone);
                     phoneCount++;
 
                 } catch (Exception e) {
-                    System.out.println("Warning: Skipping phone record - " + e.getMessage());
-                    continue;
+                    // Skip bad rows silently
                 }
             }
 
-            System.out.println("Successfully loaded " + phoneCount + " phones from CSV.");
+            System.out.println("✅ Successfully loaded " + phoneCount + " phones from CSV.");
             return true;
 
-        } catch (FileNotFoundException e) {
-            System.out.println("CSV file not found: " + csvFilePath);
-            return false;
-        } catch (IOException e) {
-            System.out.println("Error reading CSV file: " + e.getMessage());
-            return false;
         } catch (Exception e) {
-            System.out.println("Unexpected error loading CSV: " + e.getMessage());
+            System.out.println("Error loading CSV: " + e.getMessage());
             return false;
         }
     }
 
-
-    /**
-     * Index all phone specifications in the Trie for keyword search
-     */
     private void indexPhoneInTrie(PhoneData phone) {
         indexString(phone.getName(), phone.getName());
-        indexString(phone.getChipset(), phone.getName());
-        indexString(phone.getDisplayType(), phone.getName());
-        indexString(phone.getWlan(), phone.getName());
-        indexString(phone.getBluetooth(), phone.getName());
-        indexString(phone.getOs(), phone.getName());
+        indexString(phone.getSpecSummary(), phone.getName());
+        indexString(phone.getDescription(), phone.getName());
     }
 
-    /**
-     * Helper to index strings into Trie
-     */
     private void indexString(String text, String phoneName) {
         if (text == null || text.isEmpty()) return;
-
         String[] words = text.toLowerCase().split("\\s+");
         for (String word : words) {
             word = word.replaceAll("[^a-z0-9]", "");
-            if (word.length() > 0) {
+            if (word.length() > 1) {
                 invertedIndex.insert(word, phoneName);
             }
         }
     }
 
     /**
-     * Get recommendations based on user preferences
+     * Returns full text used for frequency counting
      */
-    public List<Recommendation> getRecommendations(UserPreferences preferences) {
-        try {
-            if (preferences == null) {
-                System.out.println("Error: Invalid preferences.");
-                return new ArrayList<>();
-            }
-
-            List<Recommendation> recommendations = new ArrayList<>();
-
-            // First pass: normal scoring based on preferences
-            for (PhoneData phone : allPhones) {
-                try {
-                    if (!meetsMinimumRequirements(phone, preferences)) {
-                        continue;
-                    }
-
-                    Recommendation rec = new Recommendation(phone);
-
-                    rec.setBudgetScore(calculateBudgetScore(phone, preferences));
-                    rec.setRamScore(calculateRamScore(phone, preferences));
-                    rec.setStorageScore(calculateStorageScore(phone, preferences));
-                    rec.setCameraScore(calculateCameraScore(phone, preferences));
-                    rec.setBatteryScore(calculateBatteryScore(phone, preferences));
-                    rec.setDisplayScore(calculateDisplayScore(phone, preferences));
-                    rec.setFeatureScore(calculateFeatureScore(phone, preferences));
-
-                    double overallScore =
-                            rec.getBudgetScore() * BUDGET_WEIGHT +
-                                    rec.getRamScore() * RAM_WEIGHT +
-                                    rec.getStorageScore() * STORAGE_WEIGHT +
-                                    rec.getCameraScore() * CAMERA_WEIGHT +
-                                    rec.getBatteryScore() * BATTERY_WEIGHT +
-                                    rec.getDisplayScore() * DISPLAY_WEIGHT +
-                                    rec.getFeatureScore() * FEATURE_WEIGHT;
-
-                    rec.setOverallScore(overallScore);
-                    recommendations.add(rec);
-
-                } catch (Exception e) {
-                    System.out.println("Warning: Could not score " + phone.getName() + " - " + e.getMessage());
-                    continue;
-                }
-            }
-
-            // If no phones matched all soft criteria, fall back to simpler logic
-            if (recommendations.isEmpty()) {
-                List<Recommendation> fallback = new ArrayList<>();
-
-                for (PhoneData phone : allPhones) {
-                    // Only enforce very basic constraints in fallback
-                    if (phone.getPrice() > preferences.getMaxBudget()) {
-                        continue;
-                    }
-                    if (preferences.isNeedsHeadphoneJack() && !phone.hasHeadphoneJack()) {
-                        continue;
-                    }
-                    if (preferences.isNeedsWaterResistance() &&
-                            (phone.getWaterResistance() == null ||
-                                    phone.getWaterResistance().equalsIgnoreCase("No"))) {
-                        continue;
-                    }
-
-                    Recommendation rec = new Recommendation(phone);
-
-                    // Simple score: count how many of the preferred specs this phone meets
-                    int matches = 0;
-                    int total = 0;
-
-                    if (preferences.getMinRamGb() > 0) {
-                        total++;
-                        if (phone.getRamGb() >= preferences.getMinRamGb()) {
-                            matches++;
-                        }
-                    }
-                    if (preferences.getMinStorageGb() > 0) {
-                        total++;
-                        if (phone.getStorageGb() >= preferences.getMinStorageGb()) {
-                            matches++;
-                        }
-                    }
-                    if (preferences.getMinDisplaySize() > 0) {
-                        total++;
-                        if (phone.getDisplaySize() >= preferences.getMinDisplaySize()) {
-                            matches++;
-                        }
-                    }
-                    if (preferences.getMinBatteryMah() > 0) {
-                        total++;
-                        if (phone.getBatteryMah() >= preferences.getMinBatteryMah()) {
-                            matches++;
-                        }
-                    }
-                    if (preferences.getMinMainCameraMp() > 0) {
-                        total++;
-                        if (parseFirstMegapixel(phone.getMainCamera()) >= preferences.getMinMainCameraMp()) {
-                            matches++;
-                        }
-                    }
-
-                    double simpleScore = (total == 0) ? 50.0 : (100.0 * matches / total);
-                    rec.setOverallScore(simpleScore);
-                    fallback.add(rec);
-                }
-
-                // Sort fallback by simple score (and then by price ascending as tie-breaker)
-                fallback.sort((r1, r2) -> {
-                    int cmp = Double.compare(r2.getOverallScore(), r1.getOverallScore());
-                    if (cmp != 0) return cmp;
-                    return Double.compare(r1.getPhone().getPrice(), r2.getPhone().getPrice());
-                });
-
-                return fallback;
-            }
-
-            // Sort by overall score descending
-            recommendations.sort((r1, r2) -> Double.compare(r2.getOverallScore(), r1.getOverallScore()));
-
-            return recommendations;
-
-        } catch (NullPointerException e) {
-            System.out.println("Error: Invalid data. Please try again.");
-            return new ArrayList<>();
-        } catch (Exception e) {
-            System.out.println("Recommendation error: " + e.getMessage());
-            return new ArrayList<>();
-        }
+    private String getPhoneFullText(PhoneData phone) {
+        return (phone.getDescription() + " " + phone.getSpecSummary()).toLowerCase();
     }
 
     /**
-     * Check if phone meets minimum requirements.
-     *
-     * IMPORTANT: Only budget and must-have boolean features are treated as
-     * hard filters. Numeric "minimum" values are used mainly for scoring.
+     * Search phones using Inverted Index + Frequency Count + Page Ranking
      */
-    private boolean meetsMinimumRequirements(PhoneData phone, UserPreferences prefs) {
-        // Basic sanity checks on loaded data
-        if (phone.getRamGb() <= 0 || phone.getStorageGb() <= 0 || phone.getBatteryMah() <= 0) {
+    public boolean searchByKeyword(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            System.out.println("Please enter a keyword.");
             return false;
         }
 
-        // Budget check - user sets maximum price they can pay
-        if (phone.getPrice() > prefs.getMaxBudget()) {
+        String cleanKeyword = keyword.toLowerCase().replaceAll("[^a-z0-9]", "");
+        if (cleanKeyword.isEmpty()) {
+            System.out.println("Please enter a valid keyword.");
             return false;
         }
 
-        // Must-have feature: headphone jack
-        if (prefs.isNeedsHeadphoneJack() && !phone.hasHeadphoneJack()) {
+        HashSet<String> results = invertedIndex.search(cleanKeyword);
+
+        System.out.println("\n=== Search Results for: \"" + keyword + "\" ===");
+
+        if (results.isEmpty()) {
+            System.out.println("No phones found matching this keyword.");
             return false;
         }
 
-        // Must-have feature: water resistance
-        if (prefs.isNeedsWaterResistance() &&
-                (phone.getWaterResistance() == null ||
-                        phone.getWaterResistance().equalsIgnoreCase("No"))) {
-            return false;
+        List<RankedResult> rankedResults = new ArrayList<>();
+
+        for (String phoneName : results) {
+            PhoneData phone = getPhoneByName(phoneName);
+            if (phone != null) {
+                String fullText = getPhoneFullText(phone);
+
+                // Count total occurrences (duplicates DO increase the count)
+                int frequency = FrequencyCount.countOccurrences(fullText, keyword);
+
+                // Bonus if word appears in SpecsSummary (more technical content)
+                int specFrequency = FrequencyCount.countOccurrences(phone.getSpecSummary().toLowerCase(), keyword);
+                int finalScore = frequency * 10 + specFrequency * 5;
+
+                rankedResults.add(new RankedResult(phone, finalScore, frequency));
+            }
         }
 
-        // High refresh rate is treated as a soft preference in scoring only,
-        // so we do NOT filter phones here based on it.
+        // Page Ranking: Sort by final score (higher frequency = higher rank)
+        rankedResults.sort((a, b) -> Integer.compare(b.finalScore, a.finalScore));
+
+        System.out.println("Found in " + rankedResults.size() + " phone(s). Ranked by word frequency:\n");
+
+        int count = 1;
+        for (RankedResult rr : rankedResults) {
+            System.out.printf("%2d. %-30s | Frequency: %d%n",
+                    count++,
+                    rr.phone.getName(),
+                    rr.rawFrequency);
+        }
 
         return true;
     }
 
-    /**
-     * Calculate budget score (0-100)
-     * Phones within budget range get high scores, penalty for far exceed
-     */
-    private double calculateBudgetScore(PhoneData phone, UserPreferences prefs) {
-        double price = phone.getPrice();
-        double maxBudget = prefs.getMaxBudget();
-
-        if (price <= maxBudget) {
-            // Closer to max budget = better value
-            double score = 100 * (price / maxBudget);
-            return Math.min(100, score);
-        }
-
-        return 0; // Outside budget range
-    }
-
-    /**
-     * Calculate RAM score (0-100).
-     * Below the user's desired RAM still gets a low score instead of 0,
-     * so those phones can appear but will be ranked lower.
-     */
-    private double calculateRamScore(PhoneData phone, UserPreferences prefs) {
-        int ram = phone.getRamGb();
-        int minRam = prefs.getMinRamGb();
-
-        if (minRam <= 0) {
-            return 50.0; // neutral score if user did not specify
-        }
-
-        if (ram >= minRam) {
-            double score = 100 * (ram / (double) (minRam * 2));
-            return Math.min(100, score);
-        } else {
-            // Below preference: give up to 50 points based on how close it is
-            double ratio = ram / (double) minRam; // 0.0–1.0
-            return Math.max(0, 50 * ratio);
-        }
-    }
-
-    /**
-     * Calculate storage score (0-100) with soft behavior below preference.
-     */
-    private double calculateStorageScore(PhoneData phone, UserPreferences prefs) {
-        int storage = phone.getStorageGb();
-        int minStorage = prefs.getMinStorageGb();
-
-        if (minStorage <= 0) {
-            return 50.0;
-        }
-
-        if (storage >= minStorage) {
-            double score = 100 * (storage / (double) (minStorage * 2));
-            return Math.min(100, score);
-        } else {
-            double ratio = storage / (double) minStorage;
-            return Math.max(0, 50 * ratio);
-        }
-    }
-
-    /**
-     * Calculate camera score (0-100) with soft behavior below preference.
-     */
-    private double calculateCameraScore(PhoneData phone, UserPreferences prefs) {
-        int mainCameraMp = parseFirstMegapixel(phone.getMainCamera());
-        int minMainMp = prefs.getMinMainCameraMp();
-
-        if (minMainMp <= 0) {
-            return 50.0;
-        }
-
-        if (mainCameraMp >= minMainMp) {
-            double score = 100 * (mainCameraMp / (double) (minMainMp * 2));
-            return Math.min(100, score);
-        } else {
-            double ratio = mainCameraMp / (double) minMainMp;
-            return Math.max(0, 50 * ratio);
-        }
-    }
-
-    /**
-     * Calculate battery score (0-100) with soft behavior below preference.
-     */
-    private double calculateBatteryScore(PhoneData phone, UserPreferences prefs) {
-        int battery = phone.getBatteryMah();
-        int minBattery = prefs.getMinBatteryMah();
-
-        if (minBattery <= 0) {
-            return 50.0;
-        }
-
-        if (battery >= minBattery) {
-            double score = 100 * (battery / (double) (minBattery * 1.5));
-            return Math.min(100, score);
-        } else {
-            double ratio = battery / (double) minBattery;
-            return Math.max(0, 50 * ratio);
-        }
-    }
-
-    /**
-     * Calculate display score (0-100) with soft behavior below preference.
-     */
-    private double calculateDisplayScore(PhoneData phone, UserPreferences prefs) {
-        double displaySize = phone.getDisplaySize();
-        double minDisplay = prefs.getMinDisplaySize();
-
-        if (minDisplay <= 0) {
-            minDisplay = 5.0; // default reasonable minimum
-        }
-
-        if (displaySize < 0.1) {
-            return 0; // invalid data
-        }
-
-        if (displaySize >= minDisplay) {
-            double optimalSize = 6.5;
-            double difference = Math.abs(displaySize - optimalSize);
-            double score = 100 - (difference * 5);
-            return Math.max(0, Math.min(100, score));
-        } else {
-            // Below preference: scale up to 50 based on closeness to minDisplay
-            double ratio = displaySize / minDisplay;
-            return Math.max(0, 50 * ratio);
-        }
-    }
-
-    /**
-     * Calculate feature score (0-100)
-     * Based on matching optional features (headphone jack, water resistance, etc.)
-     */
-    private double calculateFeatureScore(PhoneData phone, UserPreferences prefs) {
-        double baseScore = 50; // Base score if no specific features required
-        double bonus = 0;
-
-        if (prefs.isNeedsHeadphoneJack() && phone.hasHeadphoneJack()) {
-            bonus += 25;
-        }
-
-        if (prefs.isNeedsWaterResistance() && phone.getWaterResistance() != null &&
-            !phone.getWaterResistance().equalsIgnoreCase("No")) {
-            bonus += 25;
-        }
-
-        if (prefs.isNeedsHighRefreshRate() && phone.getDisplayType() != null &&
-            (phone.getDisplayType().contains("120Hz") || phone.getDisplayType().contains("144Hz"))) {
-            bonus += 25;
-        }
-
-        return Math.min(100, baseScore + bonus);
-    }
-
-    /**
-     * Search phones by keyword using the inverted index.
-     * Returns true if at least one phone is found, otherwise false.
-     */
-    public boolean searchByKeyword(String keyword) {
-        try {
-            // Validate input
-            if (keyword == null || keyword.isEmpty()) {
-                System.out.println("Please enter a keyword.");
-                return false;
-            }
-
-            // Clean the keyword
-            String cleanKeyword = keyword.toLowerCase().replaceAll("[^a-z0-9]", "");
-
-            if (cleanKeyword.isEmpty()) {
-                System.out.println("Please enter a valid keyword.");
-                return false;
-            }
-
-            // Search using inverted index
-            HashSet<String> results = invertedIndex.search(cleanKeyword);
-
-            System.out.println("\n=== Search Results for: \"" + keyword + "\" ===");
-
-            if (results == null || results.isEmpty()) {
-                System.out.println("No phones found matching this keyword.");
-                return false;
-            } else {
-                System.out.println("Found in " + results.size() + " phone(s):");
-                for (String phoneName : results) {
-                    System.out.println("  - " + phoneName);
-                }
-                return true;
-            }
-
-        } catch (NullPointerException e) {
-            System.out.println("Error: Invalid search operation. Please try again.");
-            return false;
-        } catch (Exception e) {
-            System.out.println("Search error: " + e.getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Get phone by name
-     */
     public PhoneData getPhoneByName(String name) {
         for (PhoneData phone : allPhones) {
             if (phone.getName().equalsIgnoreCase(name)) {
@@ -531,84 +184,179 @@ public class RecommendationEngine {
         return null;
     }
 
-    /**
-     * Get all phones
-     */
     public List<PhoneData> getAllPhones() {
         return allPhones;
     }
 
-    // Parsing helper methods
+    // ==================== ORIGINAL RECOMMENDATION METHODS ====================
+    // (All your original scoring logic - kept exactly as before)
 
-    private double parsePrice(String priceStr) {
-        if (priceStr == null || priceStr.isEmpty()) return 0;
-
-        Matcher matcher = PRICE_PATTERN.matcher(priceStr);
-        if (matcher.find()) {
-            try {
-                return Double.parseDouble(matcher.group(1));
-            } catch (NumberFormatException e) {
-                return 0;
-            }
-        }
-        return 0;
-    }
-
-    private double parseDisplaySize(String displayStr) {
-        if (displayStr == null || displayStr.isEmpty()) return 0;
-
-        Matcher matcher = DISPLAY_PATTERN.matcher(displayStr);
-        if (matcher.find()) {
-            try {
-                return Double.parseDouble(matcher.group(1));
-            } catch (NumberFormatException e) {
-                return 0;
-            }
-        }
-        return 0;
-    }
-
-    private int parseBattery(String batteryStr) {
-        if (batteryStr == null || batteryStr.isEmpty()) return 0;
-
-        Matcher matcher = BATTERY_PATTERN.matcher(batteryStr);
-        if (matcher.find()) {
-            try {
-                return Integer.parseInt(matcher.group(1));
-            } catch (NumberFormatException e) {
-                return 0;
-            }
-        }
-        return 0;
-    }
-
-    private double parseWeight(String weightStr) {
-        if (weightStr == null || weightStr.isEmpty()) return 0;
-
+    public List<Recommendation> getRecommendations(UserPreferences preferences) {
         try {
-            String[] parts = weightStr.split("\\s+");
-            return Double.parseDouble(parts[0]);
+            if (preferences == null) return new ArrayList<>();
+
+            List<Recommendation> recommendations = new ArrayList<>();
+
+            for (PhoneData phone : allPhones) {
+                if (!meetsMinimumRequirements(phone, preferences)) continue;
+
+                Recommendation rec = new Recommendation(phone);
+
+                rec.setBudgetScore(calculateBudgetScore(phone, preferences));
+                rec.setRamScore(calculateRamScore(phone, preferences));
+                rec.setStorageScore(calculateStorageScore(phone, preferences));
+                rec.setCameraScore(calculateCameraScore(phone, preferences));
+                rec.setBatteryScore(calculateBatteryScore(phone, preferences));
+                rec.setDisplayScore(calculateDisplayScore(phone, preferences));
+                rec.setFeatureScore(calculateFeatureScore(phone, preferences));
+
+                double overallScore = rec.getBudgetScore() * BUDGET_WEIGHT +
+                        rec.getRamScore() * RAM_WEIGHT +
+                        rec.getStorageScore() * STORAGE_WEIGHT +
+                        rec.getCameraScore() * CAMERA_WEIGHT +
+                        rec.getBatteryScore() * BATTERY_WEIGHT +
+                        rec.getDisplayScore() * DISPLAY_WEIGHT +
+                        rec.getFeatureScore() * FEATURE_WEIGHT;
+
+                rec.setOverallScore(overallScore);
+                recommendations.add(rec);
+            }
+
+            if (recommendations.isEmpty()) {
+                // Fallback logic (original)
+                List<Recommendation> fallback = new ArrayList<>();
+                for (PhoneData phone : allPhones) {
+                    if (phone.getPrice() > preferences.getMaxBudget()) continue;
+                    if (preferences.isNeedsHeadphoneJack() && !phone.hasHeadphoneJack()) continue;
+                    if (preferences.isNeedsWaterResistance() &&
+                            (phone.getWaterResistance() == null || phone.getWaterResistance().equalsIgnoreCase("No"))) continue;
+
+                    Recommendation rec = new Recommendation(phone);
+                    int matches = 0, total = 0;
+
+                    if (preferences.getMinRamGb() > 0) { total++; if (phone.getRamGb() >= preferences.getMinRamGb()) matches++; }
+                    if (preferences.getMinStorageGb() > 0) { total++; if (phone.getStorageGb() >= preferences.getMinStorageGb()) matches++; }
+                    if (preferences.getMinDisplaySize() > 0) { total++; if (phone.getDisplaySize() >= preferences.getMinDisplaySize()) matches++; }
+                    if (preferences.getMinBatteryMah() > 0) { total++; if (phone.getBatteryMah() >= preferences.getMinBatteryMah()) matches++; }
+                    if (preferences.getMinMainCameraMp() > 0) { total++; if (parseFirstMegapixel(phone.getMainCamera()) >= preferences.getMinMainCameraMp()) matches++; }
+
+                    double simpleScore = (total == 0) ? 50.0 : (100.0 * matches / total);
+                    rec.setOverallScore(simpleScore);
+                    fallback.add(rec);
+                }
+
+                fallback.sort((r1, r2) -> {
+                    int cmp = Double.compare(r2.getOverallScore(), r1.getOverallScore());
+                    return (cmp != 0) ? cmp : Double.compare(r1.getPhone().getPrice(), r2.getPhone().getPrice());
+                });
+                return fallback;
+            }
+
+            recommendations.sort((r1, r2) -> Double.compare(r2.getOverallScore(), r1.getOverallScore()));
+            return recommendations;
+
         } catch (Exception e) {
-            return 0;
+            System.out.println("Recommendation error: " + e.getMessage());
+            return new ArrayList<>();
         }
+    }
+
+    private boolean meetsMinimumRequirements(PhoneData phone, UserPreferences prefs) {
+        if (phone.getRamGb() <= 0 || phone.getStorageGb() <= 0 || phone.getBatteryMah() <= 0) return false;
+        if (phone.getPrice() > prefs.getMaxBudget()) return false;
+        if (prefs.isNeedsHeadphoneJack() && !phone.hasHeadphoneJack()) return false;
+        if (prefs.isNeedsWaterResistance() && (phone.getWaterResistance() == null || phone.getWaterResistance().equalsIgnoreCase("No"))) return false;
+        return true;
+    }
+
+    private double calculateBudgetScore(PhoneData phone, UserPreferences prefs) {
+        double price = phone.getPrice();
+        double maxBudget = prefs.getMaxBudget();
+        if (price <= maxBudget) {
+            double score = 100 * (price / maxBudget);
+            return Math.min(100, score);
+        }
+        return 0;
+    }
+
+    private double calculateRamScore(PhoneData phone, UserPreferences prefs) {
+        int ram = phone.getRamGb();
+        int minRam = prefs.getMinRamGb();
+        if (minRam <= 0) return 50.0;
+        if (ram >= minRam) return Math.min(100, 100.0 * ram / (minRam * 2));
+        return Math.max(0, 50.0 * ram / minRam);
+    }
+
+    private double calculateStorageScore(PhoneData phone, UserPreferences prefs) {
+        int storage = phone.getStorageGb();
+        int minStorage = prefs.getMinStorageGb();
+        if (minStorage <= 0) return 50.0;
+        if (storage >= minStorage) return Math.min(100, 100.0 * storage / (minStorage * 2));
+        return Math.max(0, 50.0 * storage / minStorage);
+    }
+
+    private double calculateCameraScore(PhoneData phone, UserPreferences prefs) {
+        int mainCameraMp = parseFirstMegapixel(phone.getMainCamera());
+        int minMainMp = prefs.getMinMainCameraMp();
+        if (minMainMp <= 0) return 50.0;
+        if (mainCameraMp >= minMainMp) return Math.min(100, 100.0 * mainCameraMp / (minMainMp * 2));
+        return Math.max(0, 50.0 * mainCameraMp / minMainMp);
+    }
+
+    private double calculateBatteryScore(PhoneData phone, UserPreferences prefs) {
+        int battery = phone.getBatteryMah();
+        int minBattery = prefs.getMinBatteryMah();
+        if (minBattery <= 0) return 50.0;
+        if (battery >= minBattery) return Math.min(100, 100.0 * battery / (minBattery * 1.5));
+        return Math.max(0, 50.0 * battery / minBattery);
+    }
+
+    private double calculateDisplayScore(PhoneData phone, UserPreferences prefs) {
+        double displaySize = phone.getDisplaySize();
+        double minDisplay = prefs.getMinDisplaySize();
+        if (minDisplay <= 0) minDisplay = 5.0;
+        if (displaySize < 0.1) return 0;
+        if (displaySize >= minDisplay) {
+            double optimal = 6.5;
+            double diff = Math.abs(displaySize - optimal);
+            return Math.max(0, Math.min(100, 100 - diff * 5));
+        }
+        return Math.max(0, 50.0 * displaySize / minDisplay);
+    }
+
+    private double calculateFeatureScore(PhoneData phone, UserPreferences prefs) {
+        double score = 50;
+        if (prefs.isNeedsHeadphoneJack() && phone.hasHeadphoneJack()) score += 25;
+        if (prefs.isNeedsWaterResistance() && phone.getWaterResistance() != null &&
+                !phone.getWaterResistance().equalsIgnoreCase("No")) score += 25;
+        if (prefs.isNeedsHighRefreshRate() && phone.getDisplayType() != null &&
+                (phone.getDisplayType().contains("120Hz") || phone.getDisplayType().contains("144Hz"))) score += 25;
+        return Math.min(100, score);
     }
 
     private int parseFirstMegapixel(String cameraStr) {
         if (cameraStr == null || cameraStr.isEmpty()) return 0;
-
         Matcher matcher = CAMERA_MP_PATTERN.matcher(cameraStr);
         if (matcher.find()) {
-            try {
-                return Integer.parseInt(matcher.group(1));
-            } catch (NumberFormatException e) {
-                return 0;
-            }
+            try { return Integer.parseInt(matcher.group(1)); } catch (Exception ignored) {}
         }
         return 0;
     }
 
     private boolean parseYesNo(String value) {
-        return value != null && (value.equalsIgnoreCase("Yes") || value.equalsIgnoreCase("true"));
+        return value != null && (value.equalsIgnoreCase("Yes") || value.equalsIgnoreCase("True") || value.equalsIgnoreCase("true"));
+    }
+
+    // This is the inner class for page ranking based on frequency count
+    private static class RankedResult {
+        final PhoneData phone;
+        final int finalScore;
+        final int rawFrequency;
+
+        RankedResult(PhoneData phone, int finalScore, int rawFrequency) {
+            this.phone = phone;
+            this.finalScore = finalScore;
+            this.rawFrequency = rawFrequency;
+        }
     }
 }
-

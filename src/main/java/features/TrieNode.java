@@ -3,20 +3,31 @@ package features;
 import java.util.HashMap;
 import java.util.HashSet;
 
-//this class represents a single node in the Trie data structure
-//each node stores its children, whether it marks the end of a word, and which phone documents contain the word.
+/**
+ * TrieNode represents a single node in the Trie (prefix tree) data structure.
+ * Each node maintains references to its child nodes, marks whether it represents
+ * the end of a valid word, and stores the set of document IDs (phone names)
+ * where the word appears.
+ *
+ * This class is a core building block of the InvertedIndex used for fast
+ * keyword-based search and page ranking.
+ */
 public class TrieNode {
 
-    //hashmap to store children nodes, where key is the character and value is next TrieNode
+    /** Map of child nodes: character → TrieNode */
     HashMap<Character, TrieNode> children;
 
-    //true if a complete word ends at this node
+    /** Flag indicating whether this node marks the end of a complete word */
     boolean isEndOfWord;
 
-    //stores the phone names (document IDs) where this word appears
+    /** Set of document IDs (phone names) containing the word that ends at this node */
     HashSet<String> documentIds;
 
-    public TrieNode(){
+    /**
+     * Constructs a new TrieNode with initialized empty children map,
+     * default end-of-word flag as false, and an empty document ID set.
+     */
+    public TrieNode() {
         children = new HashMap<>();
         isEndOfWord = false;
         documentIds = new HashSet<>();

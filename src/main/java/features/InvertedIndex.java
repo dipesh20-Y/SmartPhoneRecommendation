@@ -9,75 +9,110 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 
-//this class builds and manages the inverted index using a trie
-//it reads phone data from the CSV file, indexes all words from each phone's specs, and allows searching for words across all phone documents
+/**
+ * InvertedIndex constructs and manages a Trie-based inverted index for fast
+ * keyword-to-document mapping in the smartphone recommendation system.
+ * It processes every row of the input CSV, treating the "Name" field as the
+ * unique document identifier, and indexes normalized terms from all columns
+ * except the URL column. This structure supports efficient retrieval that
+ * integrates directly with word completion, page ranking, and spell-checking
+ * workflows.
+ */
 public class InvertedIndex {
 
-    //the trie that stores all indexed words
     private Trie trie;
 
-    //columns to skip during indexing
-    //we skip url column(indexed 27) since url are not useful for searching
     private static final int URL_COLUMN_INDEX = 27;
 
-    public InvertedIndex(){
+    public InvertedIndex() {
         trie = new Trie();
     }
 
-    //builds the Inverted index from given CSV file
-    //reads each row, uses the phone name as document ID, and indexes all words from all relevant columns
-    public void buildIndex(String filepath) {
-        try (BufferedReader br = new BufferedReader(new FileReader(filepath));
-             CSVParser parser = new CSVParser(br, CSVFormat.DEFAULT
+    /**
+     * Builds the complete inverted index from the provided CSV dataset.
+     *
+     * For each phone record:
+     * - The "Name" column becomes the document ID.
+     * - All other columns (except URL) are tokenized.
+     * - Tokens are normalized to lowercase with non-alphanumeric characters removed.
+     * - Each valid term is inserted into the Trie along with its document ID.
+     *
+     * Null or empty file paths are rejected immediately with a clear error message.
+     *
+     * @param filePath absolute or relative path to the smartphone dataset CSV
+     */
+    public void buildIndex(String filePath) {
+        if (filePath == null || filePath.trim().isEmpty()) {
+            System.out.println("Error: File path cannot be null or empty for building inverted index.");
+            return;
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath));
+             CSVParser parser = new CSVParser(reader, CSVFormat.DEFAULT
                      .withFirstRecordAsHeader()
                      .withIgnoreEmptyLines(true))) {
 
             for (CSVRecord record : parser) {
-                // Use phone Name as document ID
                 String documentId = record.get("Name").trim();
 
-                // Go through every column value in this record
-                for (int i = 0; i < record.size(); i++) {
+                if (documentId.isEmpty()) {
+                    continue;
+                }
 
-                    // Skip URL column
-                    if (i == URL_COLUMN_INDEX) {
+                for (int columnIndex = 0; columnIndex < record.size(); columnIndex++) {
+                    if (columnIndex == URL_COLUMN_INDEX) {
                         continue;
                     }
 
-                    // Split column value into words
-                    String[] words = record.get(i).trim().split("\\s+");
+                    String columnContent = record.get(columnIndex).trim();
+                    String[] tokens = columnContent.split("\\s+");
 
-                    for (String word : words) {
-                        String cleanWord = word.toLowerCase()
-                                .replaceAll("[^a-z0-9]", "");
-                        if (!cleanWord.isEmpty()) {
-                            trie.insert(cleanWord, documentId);
+                    for (String token : tokens) {
+                        String cleanedTerm = token.toLowerCase().replaceAll("[^a-z0-9]", "");
+                        if (!cleanedTerm.isEmpty()) {
+                            trie.insert(cleanedTerm, documentId);
                         }
                     }
                 }
             }
+
             System.out.println("Inverted index built successfully!");
 
         } catch (IOException e) {
             System.out.println("Error reading the file: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            System.out.println("Error processing CSV record: " + e.getMessage());
         }
     }
 
-    //searches for a word in the inverted index
-    public void search(String word){
+    /**
+     * Performs a lookup for the specified term in the inverted index and
+     * displays all matching phone documents.
+     *
+     * The search term undergoes identical normalization as during indexing
+     * to guarantee consistent matching. Results are presented as a list of
+     * document IDs (phone names).
+     *
+     * @param searchTerm the keyword or phrase to query against the index
+     */
+    public void search(String searchTerm) {
+        if (searchTerm == null || searchTerm.trim().isEmpty()) {
+            System.out.println("Error: Search term cannot be null or empty.");
+            return;
+        }
 
-        //clean the search word the same way we cleaned during insert
-        String cleanWord = word.toLowerCase().replaceAll("[^a-z0-9]", "");
-        System.out.println("\nSearching for: \"" + cleanWord + "\"");
+        String cleanedTerm = searchTerm.toLowerCase().replaceAll("[^a-z0-9]", "");
 
-        HashSet<String> results = trie.search(cleanWord);
+        System.out.println("\nSearching for: \"" + cleanedTerm + "\"");
 
-        if(results.isEmpty()){
-            System.out.println("No results found for: \"" + cleanWord + "\"");
-        }else{
-            System.out.println("Found in " + results.size() + " phone(s):");
-            for(String doc: results){
-                System.out.println("- " + doc);
+        HashSet<String> matchingDocuments = trie.search(cleanedTerm);
+
+        if (matchingDocuments.isEmpty()) {
+            System.out.println("No results found for: \"" + cleanedTerm + "\"");
+        } else {
+            System.out.println("Found in " + matchingDocuments.size() + " phone(s):");
+            for (String documentId : matchingDocuments) {
+                System.out.println("- " + documentId);
             }
         }
     }

@@ -5,98 +5,103 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * TrieDictionary implements a prefix tree used for
- * fast word lookup and auto-completion.
- * Words are stored character by character.
- * This allows efficient prefix based searching.
+ * WCTrie implements a prefix tree (Trie) specifically designed for
+ * word completion and autocomplete functionality in the smartphone
+ * recommendation system. It efficiently stores vocabulary terms and
+ * supports fast prefix-based searches for real-time suggestions.
  */
 public class WCTrie {
 
-    // Root node of the trie
-    private WCTrieNode startNode;
+    private final WCTrieNode root;
 
     /**
-     * Constructor initializes the root node
+     * Constructs a new WCTrie with an empty root node.
      */
     public WCTrie() {
-        startNode = new WCTrieNode();
+        root = new WCTrieNode();
     }
 
     /**
-     * Adds a word into the trie structure.
-     * Each character becomes a node in the tree.
+     * Adds a word to the Trie for word completion support.
+     * Each character of the word becomes a node in the tree.
+     *
+     * @param term the word to be inserted into the Trie
      */
     public void addWord(String term) {
-
-        WCTrieNode pointer = startNode;
-
-        for (int i = 0; i < term.length(); i++) {
-
-            char letter = term.charAt(i);
-
-            // If the path does not exist, create it
-            if (!pointer.children.containsKey(letter)) {
-                pointer.children.put(letter, new WCTrieNode());
-            }
-
-            // Move deeper in the tree
-            pointer = pointer.children.get(letter);
+        if (term == null || term.trim().isEmpty()) {
+            System.out.println("Error: Term cannot be null or empty for word completion insertion.");
+            return;
         }
 
-        // Mark that a full word ends here
-        pointer.isEndOfWord = true;
+        String normalizedTerm = term.toLowerCase().trim();
+        WCTrieNode current = root;
+
+        for (int i = 0; i < normalizedTerm.length(); i++) {
+            char ch = normalizedTerm.charAt(i);
+
+            if (!current.children.containsKey(ch)) {
+                current.children.put(ch, new WCTrieNode());
+            }
+
+            current = current.children.get(ch);
+        }
+
+        current.isEndOfWord = true;
     }
 
     /**
-     * Returns all stored words that start
-     * with the provided prefix.
+     * Returns a list of all words in the Trie that start with the given prefix.
+     * Used for real-time autocomplete suggestions.
+     *
+     * @param prefix the prefix string to search for
+     * @return list of matching words; empty list if no matches found
      */
     public List<String> getWordsStartingWith(String prefix) {
-
-        List<String> foundWords = new ArrayList<>();
-
-        WCTrieNode pointer = startNode;
-
-        // Traverse the trie to reach prefix end
-        for (int i = 0; i < prefix.length(); i++) {
-
-            char letter = prefix.charAt(i);
-
-            if (!pointer.children.containsKey(letter)) {
-                return foundWords; // prefix not found
-            }
-
-            pointer = pointer.children.get(letter);
+        if (prefix == null || prefix.trim().isEmpty()) {
+            System.out.println("Error: Prefix cannot be null or empty for word completion search.");
+            return new ArrayList<>();
         }
 
-        // Explore remaining branches
-        explore(pointer, prefix, foundWords);
+        List<String> suggestions = new ArrayList<>();
+        String normalizedPrefix = prefix.toLowerCase().trim();
 
-        return foundWords;
+        WCTrieNode current = root;
+
+        // Traverse to the end of the prefix
+        for (int i = 0; i < normalizedPrefix.length(); i++) {
+            char ch = normalizedPrefix.charAt(i);
+
+            if (!current.children.containsKey(ch)) {
+                return suggestions; // No words with this prefix
+            }
+
+            current = current.children.get(ch);
+        }
+
+        // Collect all words starting from this prefix
+        explore(current, normalizedPrefix, suggestions);
+
+        return suggestions;
     }
 
     /**
-     * Depth-first traversal of the trie to collect words.
-     * This recursively explores all children nodes.
+     * Recursively explores the Trie from the current node to collect
+     * all complete words that start with the given prefix.
+     *
+     * @param node          current Trie node
+     * @param currentPrefix the prefix built so far
+     * @param results       list to store matching words
      */
-    private void explore(WCTrieNode currentNode,
-                         String currentPrefix,
-                         List<String> results) {
-
-        // If this node represents a word, store it
-        if (currentNode.isEndOfWord) {
+    private void explore(WCTrieNode node, String currentPrefix, List<String> results) {
+        if (node.isEndOfWord) {
             results.add(currentPrefix);
         }
 
-        // Visit all child nodes
-        for (Map.Entry<Character, WCTrieNode> branch : currentNode.children.entrySet()) {
+        for (Map.Entry<Character, WCTrieNode> entry : node.children.entrySet()) {
+            char nextChar = entry.getKey();
+            WCTrieNode nextNode = entry.getValue();
 
-            char nextLetter = branch.getKey();
-            WCTrieNode nextNode = branch.getValue();
-
-            explore(nextNode,
-                    currentPrefix + nextLetter,
-                    results);
+            explore(nextNode, currentPrefix + nextChar, results);
         }
     }
 }

@@ -1,37 +1,47 @@
 package features;
 
-import java.util.HashSet;   // HashSet is used to store vocabulary words for fast lookup
+import java.util.HashSet;
 
-// This class is responsible for checking whether a given word
-// exists in the vocabulary loaded from the CSV file
+/**
+ * SpellChecker provides fast dictionary lookup functionality to determine
+ * whether a given word exists in the system's vocabulary. It supports the
+ * spell-checking feature by comparing user input against terms extracted
+ * from the smartphone dataset.
+ */
 public class SpellChecker {
 
-    // This HashSet stores all valid words extracted from the dataset
-    // Using a set ensures that lookups are efficient and duplicates are avoided
-    private HashSet<String> storingWords;
+    private final HashSet<String> vocabulary;
 
-    // Constructor initializes the spell checker with the vocabulary data
-    // passed from the main program
-    public SpellChecker(HashSet<String> inputData) {
-        this.storingWords = inputData;
+    /**
+     * Constructs a SpellChecker with the provided vocabulary set.
+     *
+     * @param inputVocabulary the HashSet containing valid words loaded from the dataset
+     */
+    public SpellChecker(HashSet<String> inputVocabulary) {
+        if (inputVocabulary == null) {
+            System.out.println("Error: Vocabulary cannot be null for SpellChecker initialization.");
+            this.vocabulary = new HashSet<>();
+        } else {
+            this.vocabulary = inputVocabulary;
+        }
     }
 
-    // This method checks if a word is spelled correctly
-    // by verifying its presence in the stored vocabulary
+    /**
+     * Checks whether the given word is spelled correctly by looking it up
+     * in the loaded vocabulary. The comparison is case-insensitive.
+     *
+     * @param value the word to be checked for spelling correctness
+     * @return true if the word exists in the vocabulary, false otherwise
+     */
     public boolean Correct_Word(String value) {
-
-        // Handle edge cases where the input is null or empty
-        // Such inputs cannot be valid dictionary words
-        if (value == null || value.length() == 0) {
+        if (value == null || value.trim().isEmpty()) {
+            System.out.println("Error: Input word cannot be null or empty for spell checking.");
             return false;
         }
 
-        // Convert the input word to lowercase so that
-        // the comparison is case-insensitive
-        String normalization_words = value.toLowerCase();
+        // Normalize to lowercase for case-insensitive matching
+        String normalizedWord = value.toLowerCase().trim();
 
-        // Check if the normalized word exists in the HashSet
-        // and return the result of that lookup
-        return storingWords.contains(normalization_words);
+        return vocabulary.contains(normalizedWord);
     }
 }

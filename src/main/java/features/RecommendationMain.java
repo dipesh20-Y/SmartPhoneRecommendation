@@ -1,38 +1,28 @@
 package features;
 
-import java.util.InputMismatchException;
-import java.util.List;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.InputMismatchException;
+import java.util.List;
 import java.util.Scanner;
-import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
- * RecommendationMain.java
- *
- * Main entry point for the Smartphone Recommendation System.
- * Features integrated:
- * - Recommendation Engine with scoring
- * - Data Validation using regex
- * - Pattern Finding using regex
- * - Inverted Index Search (with Frequency Count + Page Ranking)
- * - Word Completion (WCTrie)
- * - Spell Checking with Edit Distance + Merge Sort
- *
- * Only small change: searchPhonesByKeyword now uses the enhanced search
- * that automatically shows Frequency Count and Page Ranking.
+ * RecommendationMain serves as the primary entry point for the Smartphone
+ * Recommendation System. It integrates all core features including:
+ * - Multi-criteria recommendation engine with weighted scoring
+ * - Trie-based word completion
+ * - Inverted index with frequency counting and page ranking
+ * - Spell checking using edit distance and merge sort
+ * - Input validation using regex patterns
  */
 public class RecommendationMain {
 
     private static RecommendationEngine engine;
     private static DataValidation validator;
     private static Scanner scanner;
-
-    // Trie for word completion (brand / model / processor / OS)
     private static WCTrie wordCompletionTrie;
-
-    // Vocabulary and spell checker components
     private static HashSet<String> spellVocabulary;
 
     public static void main(String[] args) {
@@ -47,8 +37,6 @@ public class RecommendationMain {
         System.out.println("   Smartphone Recommendation System");
         System.out.println("========================================\n");
 
-        System.out.println("Loading phone data from CSV...");
-
         try {
             if (!engine.loadPhonesCsv(csvPath)) {
                 System.out.println("Failed to load phone data. Exiting...");
@@ -56,7 +44,7 @@ public class RecommendationMain {
                 return;
             }
 
-            // Load vocabulary for word completion
+            // Load data for word completion
             CSVLoaderWC.loadCSVIntoTrie(csvPath, wordCompletionTrie);
 
             // Load vocabulary for spell checking
@@ -99,12 +87,10 @@ public class RecommendationMain {
     }
 
     /**
-     * Display main menu options
+     * Displays the main menu options to the user.
      */
     private static void displayMainMenu() {
-        System.out.println("\n========================================");
-        System.out.println("   Main Menu");
-        System.out.println("========================================");
+        System.out.println("Main Menu");
         System.out.println("1. Get Phone Recommendations");
         System.out.println("2. Search Phones by Keyword");
         System.out.println("3. View All Available Phones");
@@ -113,93 +99,82 @@ public class RecommendationMain {
     }
 
     /**
-     * Guide user through preference gathering and display recommendations
+     * Guides the user through preference collection and generates recommendations.
      */
     private static void getRecommendations() {
         try {
-            System.out.println("\n========================================");
-            System.out.println("   Recommendation Wizard");
-            System.out.println("   (Data Validation + Pattern Finding Active)");
-            System.out.println("========================================\n");
+            System.out.println("\nRecommendation Wizard");
+            System.out.println("(Data Validation + Pattern Finding Active)\n");
 
             UserPreferences prefs = new UserPreferences();
 
-            try {
-                System.out.println("--- Budget ---");
-                System.out.println("Price range in database: $221 - $1899");
-                double maxBudget = getPositiveDoubleInput("Enter your maximum budget ($): ", "Budget");
-                prefs.setMaxBudget(maxBudget);
+            System.out.println("--- Budget ---");
+            System.out.println("Price range in database: $221 - $1899");
+            double maxBudget = getPositiveDoubleInput();
+            prefs.setMaxBudget(maxBudget);
 
-                System.out.println("\n--- Memory (RAM) ---");
-                System.out.println("Available RAM options: 6GB, 8GB, 12GB, 16GB");
-                int minRam = getValidatedRAMInput("Select minimum RAM (choose from above): ");
-                prefs.setMinRamGb(minRam);
+            System.out.println("\n--- Memory (RAM) ---");
+            System.out.println("Available RAM options: 6GB, 8GB, 12GB, 16GB");
+            int minRam = getValidatedRAMInput();
+            prefs.setMinRamGb(minRam);
 
-                System.out.println("\n--- Storage ---");
-                System.out.println("Available storage options: 128GB, 256GB");
-                int minStorage = getValidatedStorageInput("Select minimum storage (choose from above): ");
-                prefs.setMinStorageGb(minStorage);
+            System.out.println("\n--- Storage ---");
+            System.out.println("Available storage options: 128GB, 256GB");
+            int minStorage = getValidatedStorageInput();
+            prefs.setMinStorageGb(minStorage);
 
-                System.out.println("\n--- Display Size ---");
-                System.out.println("Available display sizes: 154.9\", 156.4\", 157.5\", 160.0\", 169.1\", 170.2\", 172.7\", 174.1\", 203.1\"");
-                double minDisplay = getValidatedDisplayInput("Select minimum display size (choose from above): ");
-                prefs.setMinDisplaySize(minDisplay);
+            System.out.println("\n--- Display Size ---");
+            System.out.println("Available display sizes: 154.9\", 156.4\", 157.5\", 160.0\", 169.1\", 170.2\", 172.7\", 174.1\", 203.1\"");
+            double minDisplay = getValidatedDisplayInput();
+            prefs.setMinDisplaySize(minDisplay);
 
-                System.out.println("\n--- Battery ---");
-                System.out.println("Available battery capacities: 3900, 4000, 4300, 4400, 4575, 4700, 4870, 5000, 5003, 5050, 5100, 5200 mAh");
-                int minBattery = getValidatedBatteryInput("Select minimum battery (choose from above): ");
-                prefs.setMinBatteryMah(minBattery);
+            System.out.println("\n--- Battery ---");
+            System.out.println("Available battery capacities: 3900, 4000, 4300, 4400, 4575, 4700, 4870, 5000, 5003, 5050, 5100, 5200 mAh");
+            int minBattery = getValidatedBatteryInput();
+            prefs.setMinBatteryMah(minBattery);
 
-                System.out.println("\n--- Camera ---");
-                System.out.println("Available camera specs: 2MP, 48MP, 50MP, 64MP, 200MP");
-                int minCamera = getValidatedCameraInput("Select minimum camera (choose from above): ");
-                prefs.setMinMainCameraMp(minCamera);
+            System.out.println("\n--- Camera ---");
+            System.out.println("Available camera specs: 2MP, 48MP, 50MP, 64MP, 200MP");
+            int minCamera = getValidatedCameraInput();
+            prefs.setMinMainCameraMp(minCamera);
 
-                System.out.println("\n--- Optional Features ---");
-                boolean needsHeadphone = getYesNoInput("Do you need a headphone jack? (y/n): ");
-                prefs.setNeedsHeadphoneJack(needsHeadphone);
+            System.out.println("\n--- Optional Features ---");
+            boolean needsHeadphone = getYesNoInput("Do you need a headphone jack? (y/n): ");
+            prefs.setNeedsHeadphoneJack(needsHeadphone);
 
-                boolean needsWaterResistance = getYesNoInput("Do you need water resistance? (y/n): ");
-                prefs.setNeedsWaterResistance(needsWaterResistance);
+            boolean needsWaterResistance = getYesNoInput("Do you need water resistance? (y/n): ");
+            prefs.setNeedsWaterResistance(needsWaterResistance);
 
-                boolean needsHighRefresh = getYesNoInput("Do you prefer high refresh rate (120Hz+)? (y/n): ");
-                prefs.setNeedsHighRefreshRate(needsHighRefresh);
+            boolean needsHighRefresh = getYesNoInput("Do you prefer high refresh rate (120Hz+)? (y/n): ");
+            prefs.setNeedsHighRefreshRate(needsHighRefresh);
 
-                System.out.println("\n\nAnalyzing phones based on your preferences...");
-                List<Recommendation> recommendations = engine.getRecommendations(prefs);
+            System.out.println("\nAnalyzing phones based on your preferences...");
+            List<Recommendation> recommendations = engine.getRecommendations(prefs);
 
-                if (recommendations.isEmpty()) {
-                    System.out.println("\nNo phones match your criteria.");
-                    System.out.println("Try adjusting your preferences or selecting from available options.");
-                    return;
-                }
-
-                displayRecommendations(recommendations);
-
-            } catch (InputMismatchException e) {
-                System.out.println("Invalid input. Please try again with valid numbers.");
-            } catch (Exception e) {
-                System.out.println("Error during preference input: " + e.getMessage());
+            if (recommendations.isEmpty()) {
+                System.out.println("\nNo phones match your criteria.");
+                System.out.println("Try adjusting your preferences or selecting from available options.");
+                return;
             }
 
+            displayRecommendations(recommendations);
+
         } catch (Exception e) {
-            System.out.println("Recommendation error: " + e.getMessage());
+            System.out.println("Error during recommendation process: " + e.getMessage());
         }
     }
 
     /**
-     * Display recommendations to user with URLs
+     * Displays the top recommendations with detailed information.
      */
     private static void displayRecommendations(List<Recommendation> recommendations) {
         if (recommendations.isEmpty()) {
-            System.out.println("\n❌ No phones match your criteria.");
+            System.out.println("\nNo phones match your criteria.");
             System.out.println("Please try adjusting your preferences.");
             return;
         }
 
-        System.out.println("\n========================================");
-        System.out.println("   Top Recommendations for You");
-        System.out.println("========================================\n");
+        System.out.println("\nTop Recommendations for You\n");
 
         int maxDisplay = Math.min(10, recommendations.size());
         for (int i = 0; i < maxDisplay; i++) {
@@ -213,7 +188,8 @@ public class RecommendationMain {
             System.out.println("   Display: " + String.format("%.1f", phone.getDisplaySize()) + "\" | Battery: " + phone.getBatteryMah() + "mAh");
             System.out.println("   Main Camera: " + phone.getMainCamera());
             System.out.println("   Headphone Jack: " + (phone.hasHeadphoneJack() ? "Yes" : "No"));
-            System.out.println("   Water Resistant: " + (phone.getWaterResistance() != null && !phone.getWaterResistance().equalsIgnoreCase("No") ? "Yes" : "No"));
+            System.out.println("   Water Resistant: " + (phone.getWaterResistance() != null &&
+                    !phone.getWaterResistance().equalsIgnoreCase("No") ? "Yes" : "No"));
 
             if (phone.getUrl() != null && !phone.getUrl().isEmpty()) {
                 System.out.println("   More Info: " + phone.getUrl());
@@ -227,13 +203,12 @@ public class RecommendationMain {
     }
 
     /**
-     * Search phones by keyword WITH FREQUENCY COUNT + PAGE RANKING
+     * Performs keyword-based search using inverted index, frequency count,
+     * and page ranking. Includes word completion and spell checking fallbacks.
      */
     private static void searchPhonesByKeyword() {
         try {
-            System.out.println("\n========================================");
-            System.out.println("   Phone Keyword Search");
-            System.out.println("========================================\n");
+            System.out.println("\nPhone Keyword Search\n");
 
             System.out.print("Enter keyword to search (e.g., 'pixel', 'ios'): ");
             String keyword = scanner.nextLine().trim().toLowerCase();
@@ -243,7 +218,7 @@ public class RecommendationMain {
                 return;
             }
 
-            // Data Validation
+            // Basic input validation
             if (!keyword.matches("^[a-z0-9\\s\\-]+$")) {
                 System.out.println("Invalid search input.");
                 System.out.println("   Use only: letters, numbers, spaces, hyphens");
@@ -251,7 +226,7 @@ public class RecommendationMain {
             }
             System.out.println("Input validation passed");
 
-            // Pattern Finding
+            // Pattern finding demonstration
             System.out.println("\n[PATTERN FINDING] Analyzing search query...");
 
             Pattern brandPattern = Pattern.compile("(google|samsung|apple|oneplus|xiaomi|pixel|galaxy|iphone)", Pattern.CASE_INSENSITIVE);
@@ -272,11 +247,11 @@ public class RecommendationMain {
                 System.out.println("  Specification found: \"" + specMatcher.group() + "\"");
             }
 
-            // INVERTED INDEX SEARCH WITH FREQUENCY COUNT + PAGE RANKING
+            // Primary search using Inverted Index + Frequency Count + Page Ranking
             System.out.println("\n[INVERTED INDEX SEARCH] Searching phones...\n");
             boolean found = engine.searchByKeyword(keyword);
             if (found) {
-                return;  // Frequency Count + Page Ranking already displayed
+                return;
             }
 
             // Word Completion fallback
@@ -284,8 +259,8 @@ public class RecommendationMain {
                 List<String> completions = wordCompletionTrie.getWordsStartingWith(keyword);
                 if (!completions.isEmpty()) {
                     System.out.println("\n[WORD COMPLETION] Suggestions:");
-                    for (String c : completions) {
-                        System.out.println("  - " + c);
+                    for (String completion : completions) {
+                        System.out.println("  - " + completion);
                     }
 
                     System.out.print("\nType the corrected word to search with it, or type 'exit' to go back: ");
@@ -312,7 +287,7 @@ public class RecommendationMain {
 
             List<SuggestionOf_Words> suggestions = new ArrayList<>();
             for (String vocabWord : spellVocabulary) {
-                int dist = EditDistanceCompSC.compuation(keyword, vocabWord);
+                int dist = EditDistanceCompSC.computation(keyword, vocabWord);
                 if (dist <= 2) {
                     suggestions.add(new SuggestionOf_Words(vocabWord, dist));
                 }
@@ -342,13 +317,11 @@ public class RecommendationMain {
     }
 
     /**
-     * View all available phones
+     * Displays all available phones sorted by name.
      */
     private static void viewAllPhones() {
         try {
-            System.out.println("\n========================================");
-            System.out.println("   All Available Phones");
-            System.out.println("========================================\n");
+            System.out.println("\nAll Available Phones\n");
 
             List<PhoneData> phones = engine.getAllPhones();
 
@@ -376,13 +349,13 @@ public class RecommendationMain {
 
     // ==================== INPUT VALIDATION HELPERS ====================
 
-    private static double getPositiveDoubleInput(String prompt, String fieldName) {
+    private static double getPositiveDoubleInput() {
         while (true) {
-            System.out.print(prompt);
+            System.out.print("Enter your maximum budget ($): ");
             String input = scanner.nextLine().trim();
 
             if (input.isEmpty()) {
-                System.out.println("❌ Input cannot be empty.");
+                System.out.println("Input cannot be empty.");
                 continue;
             }
 
@@ -395,35 +368,9 @@ public class RecommendationMain {
             try {
                 double value = Double.parseDouble(extracted);
                 if (value > 0) return value;
-                else System.out.println("❌ Please enter a positive number.");
+                else System.out.println("Please enter a positive number.");
             } catch (NumberFormatException e) {
-                System.out.println("❌ " + fieldName + " must be a valid number.");
-            }
-        }
-    }
-
-    private static int getPositiveIntInput(String prompt, String fieldName) {
-        while (true) {
-            System.out.print(prompt);
-            String input = scanner.nextLine().trim();
-
-            if (input.isEmpty()) {
-                System.out.println("❌ Input cannot be empty.");
-                continue;
-            }
-
-            String extracted = input.replaceAll("[^0-9]", "").trim();
-            if (extracted.isEmpty()) {
-                System.out.println("❌ Please enter a valid number.");
-                continue;
-            }
-
-            try {
-                int value = Integer.parseInt(extracted);
-                if (value > 0) return value;
-                else System.out.println("❌ Please enter a positive number.");
-            } catch (NumberFormatException e) {
-                System.out.println("❌ " + fieldName + " must be a valid whole number.");
+                System.out.println("Budget" + " must be a valid number.");
             }
         }
     }
@@ -439,37 +386,37 @@ public class RecommendationMain {
         }
     }
 
-    private static int getValidatedRAMInput(String prompt) {
+    private static int getValidatedRAMInput() {
         while (true) {
-            System.out.print(prompt);
+            System.out.print("Select minimum RAM (choose from above): ");
             String input = scanner.nextLine().trim();
             try {
                 int ram = Integer.parseInt(input.replaceAll("[^0-9]", ""));
                 if (ram == 6 || ram == 8 || ram == 12 || ram == 16) return ram;
-                else System.out.println("❌ Please select from: 6GB, 8GB, 12GB, 16GB");
+                else System.out.println("Please select from: 6GB, 8GB, 12GB, 16GB");
             } catch (NumberFormatException e) {
-                System.out.println("❌ Please enter a valid RAM option.");
+                System.out.println("Please enter a valid RAM option.");
             }
         }
     }
 
-    private static int getValidatedStorageInput(String prompt) {
+    private static int getValidatedStorageInput() {
         while (true) {
-            System.out.print(prompt);
+            System.out.print("Select minimum storage (choose from above): ");
             String input = scanner.nextLine().trim();
             try {
                 int storage = Integer.parseInt(input.replaceAll("[^0-9]", ""));
                 if (storage == 128 || storage == 256) return storage;
-                else System.out.println("❌ Please select from: 128GB, 256GB");
+                else System.out.println("Please select from: 128GB, 256GB");
             } catch (NumberFormatException e) {
-                System.out.println("❌ Please enter a valid storage option.");
+                System.out.println("Please enter a valid storage option.");
             }
         }
     }
 
-    private static double getValidatedDisplayInput(String prompt) {
+    private static double getValidatedDisplayInput() {
         while (true) {
-            System.out.print(prompt);
+            System.out.print("Select minimum display size (choose from above): ");
             String input = scanner.nextLine().trim();
             try {
                 double display = Double.parseDouble(input.replaceAll("[^0-9.]", ""));
@@ -477,17 +424,17 @@ public class RecommendationMain {
                         display == 169.1 || display == 170.2 || display == 172.7 || display == 174.1 || display == 203.1) {
                     return display;
                 } else {
-                    System.out.println("❌ Please select from available display sizes.");
+                    System.out.println("Please select from available display sizes.");
                 }
             } catch (NumberFormatException e) {
-                System.out.println("❌ Please enter a valid display size.");
+                System.out.println("Please enter a valid display size.");
             }
         }
     }
 
-    private static int getValidatedBatteryInput(String prompt) {
+    private static int getValidatedBatteryInput() {
         while (true) {
-            System.out.print(prompt);
+            System.out.print("Select minimum battery (choose from above): ");
             String input = scanner.nextLine().trim();
             try {
                 int battery = Integer.parseInt(input.replaceAll("[^0-9]", ""));
@@ -496,27 +443,27 @@ public class RecommendationMain {
                         battery == 5003 || battery == 5050 || battery == 5100 || battery == 5200) {
                     return battery;
                 } else {
-                    System.out.println("❌ Please select from available battery values.");
+                    System.out.println("Please select from available battery values.");
                 }
             } catch (NumberFormatException e) {
-                System.out.println("❌ Please enter a valid battery option.");
+                System.out.println("Please enter a valid battery option.");
             }
         }
     }
 
-    private static int getValidatedCameraInput(String prompt) {
+    private static int getValidatedCameraInput() {
         while (true) {
-            System.out.print(prompt);
+            System.out.print("Select minimum camera (choose from above): ");
             String input = scanner.nextLine().trim();
             try {
                 int camera = Integer.parseInt(input.replaceAll("[^0-9]", ""));
                 if (camera == 2 || camera == 48 || camera == 50 || camera == 64 || camera == 200) {
                     return camera;
                 } else {
-                    System.out.println("❌ Please select from: 2MP, 48MP, 50MP, 64MP, 200MP");
+                    System.out.println("Please select from: 2MP, 48MP, 50MP, 64MP, 200MP");
                 }
             } catch (NumberFormatException e) {
-                System.out.println("❌ Please enter a valid camera option.");
+                System.out.println("Please enter a valid camera option.");
             }
         }
     }

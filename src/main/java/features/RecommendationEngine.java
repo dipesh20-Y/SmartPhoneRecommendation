@@ -11,18 +11,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * RecommendationEngine.java does following tasks:
- * - Loads all records from CSV into Trie
- * - Frequency Count: Counts ALL occurrences of the word (duplicates increase count)
- * - Page Ranking: Phones are ranked by how many times the keyword appears
- * - Provides smartphone with page ranking based on keyword searched
+ * RecommendationEngine manages phone data loading, keyword search with ranking,
+ * and personalized recommendations based on user preferences.
  */
 public class RecommendationEngine {
 
     private final List<PhoneData> allPhones = new ArrayList<>();
     private final Trie invertedIndex = new Trie();
 
-    // Scoring weights (original values)
     private static final double BUDGET_WEIGHT = 0.20;
     private static final double RAM_WEIGHT = 0.15;
     private static final double STORAGE_WEIGHT = 0.10;
@@ -31,14 +27,10 @@ public class RecommendationEngine {
     private static final double DISPLAY_WEIGHT = 0.10;
     private static final double FEATURE_WEIGHT = 0.10;
 
-    // Regex patterns (original)
     private static final Pattern CAMERA_MP_PATTERN = Pattern.compile("(\\d+)");
 
     public RecommendationEngine() {}
 
-    /**
-     * Loads phone data from CSV file
-     */
     public boolean loadPhonesCsv(String csvFilePath) {
         try (BufferedReader br = new BufferedReader(new FileReader(csvFilePath));
              CSVParser parser = new CSVParser(br, CSVFormat.DEFAULT
@@ -51,7 +43,6 @@ public class RecommendationEngine {
                 try {
                     PhoneData phone = new PhoneData();
 
-                    // Basic fields
                     phone.setName(record.get("Brand") + " " + record.get("Model"));
                     phone.setOs(record.get("OS"));
                     phone.setChipset(record.get("Processor"));
@@ -67,11 +58,9 @@ public class RecommendationEngine {
                     phone.setUrl(record.get("URL"));
                     phone.setRamStorage(record.get("RAM"));
 
-                    // Safe parsing for numeric fields
                     try { phone.setRamGb(Integer.parseInt(record.get("RAM"))); } catch (Exception e) { phone.setRamGb(0); }
                     try { phone.setStorageGb(Integer.parseInt(record.get("Storage"))); } catch (Exception e) { phone.setStorageGb(0); }
 
-                    // Important fields for Frequency Count & Page Ranking
                     phone.setSpecSummary(record.get("SpecsSummary") != null ? record.get("SpecsSummary").trim() : "");
                     phone.setDescription(record.get("Description") != null ? record.get("Description").trim() : "");
 
@@ -80,11 +69,10 @@ public class RecommendationEngine {
                     phoneCount++;
 
                 } catch (Exception e) {
-                    // Skip bad rows silently
+                    e.printStackTrace();
                 }
             }
 
-            System.out.println("✅ Successfully loaded " + phoneCount + " phones from CSV.");
             return true;
 
         } catch (Exception e) {
@@ -110,16 +98,10 @@ public class RecommendationEngine {
         }
     }
 
-    /**
-     * Returns full text used for frequency counting
-     */
     private String getPhoneFullText(PhoneData phone) {
         return (phone.getDescription() + " " + phone.getSpecSummary()).toLowerCase();
     }
 
-    /**
-     * Search phones using Inverted Index + Frequency Count + Page Ranking
-     */
     public boolean searchByKeyword(String keyword) {
         if (keyword == null || keyword.trim().isEmpty()) {
             System.out.println("Please enter a keyword.");
@@ -148,10 +130,7 @@ public class RecommendationEngine {
             if (phone != null) {
                 String fullText = getPhoneFullText(phone);
 
-                // Count total occurrences (duplicates DO increase the count)
                 int frequency = FrequencyCount.countOccurrences(fullText, keyword);
-
-                // Bonus if word appears in SpecsSummary (more technical content)
                 int specFrequency = FrequencyCount.countOccurrences(phone.getSpecSummary().toLowerCase(), keyword);
                 int finalScore = frequency * 10 + specFrequency * 5;
 
@@ -159,7 +138,6 @@ public class RecommendationEngine {
             }
         }
 
-        // Page Ranking: Sort by final score (higher frequency = higher rank)
         rankedResults.sort((a, b) -> Integer.compare(b.finalScore, a.finalScore));
 
         System.out.println("Found in " + rankedResults.size() + " phone(s). Ranked by word frequency:\n");
@@ -171,7 +149,6 @@ public class RecommendationEngine {
                     rr.phone.getName(),
                     rr.rawFrequency);
 
-            // Display URL if available
             if (rr.phone.getUrl() != null && !rr.phone.getUrl().isEmpty()) {
                 System.out.println("    URL: " + rr.phone.getUrl());
             } else {
@@ -195,9 +172,6 @@ public class RecommendationEngine {
     public List<PhoneData> getAllPhones() {
         return allPhones;
     }
-
-    // ==================== ORIGINAL RECOMMENDATION METHODS ====================
-    // (All your original scoring logic - kept exactly as before)
 
     public List<Recommendation> getRecommendations(UserPreferences preferences) {
         try {
@@ -231,7 +205,6 @@ public class RecommendationEngine {
             }
 
             if (recommendations.isEmpty()) {
-                // Fallback logic (original)
                 List<Recommendation> fallback = new ArrayList<>();
                 for (PhoneData phone : allPhones) {
                     if (phone.getPrice() > preferences.getMaxBudget()) continue;
@@ -355,7 +328,6 @@ public class RecommendationEngine {
         return value != null && (value.equalsIgnoreCase("Yes") || value.equalsIgnoreCase("True") || value.equalsIgnoreCase("true"));
     }
 
-    // This is the inner class for page ranking based on frequency count
     private static class RankedResult {
         final PhoneData phone;
         final int finalScore;

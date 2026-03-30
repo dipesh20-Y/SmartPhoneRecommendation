@@ -1,22 +1,26 @@
 package features;
+
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * TrieNode represents each character node in the Trie.
- * Each node contains:
- * - children nodes
- * - a flag to indicate end of a word
+ * WCTrieNode represents a single character node in the WCTrie (word completion Trie).
+ * Each node maintains a map of child nodes and a flag indicating whether it marks
+ * the end of a complete word. This structure enables efficient prefix-based
+ * autocomplete functionality in the recommendation system.
  */
 public class WCTrieNode {
 
-    // Map to store child characters
+    /** Map containing child nodes: character → WCTrieNode */
     Map<Character, WCTrieNode> children;
 
-    // Indicates whether this node completes a word
+    /** Flag indicating whether this node represents the end of a valid word */
     boolean isEndOfWord;
 
-    // Constructor
+    /**
+     * Constructs a new WCTrieNode with an empty children map
+     * and the end-of-word flag set to false.
+     */
     public WCTrieNode() {
         children = new HashMap<>();
         isEndOfWord = false;

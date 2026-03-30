@@ -1,62 +1,106 @@
 package features;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
-
 /**
- * This class is used to count the word with pattern, and it also gives the implementation of Boyer Moore algorithm
+ * FrequencyCount implements the Boyer-Moore algorithm for high-performance
+ * pattern matching and term frequency analysis. This utility is a critical
+ * component of the page-ranking pipeline: it counts exact occurrences of
+ * search terms within smartphone document text to compute relevance scores
+ * that feed the inverted index lookup and final result ordering.
  */
 public class FrequencyCount {
 
     /**
-     * REUSABLE METHOD - Used by RecommendationEngine for Frequency Count & Page Ranking
+     * Counts how many times the given pattern appears in the text.
+     * This reusable method is called by the RecommendationEngine during
+     * page ranking to determine term frequency for relevance scoring.
+     * Null or empty inputs are rejected with a clear error message.
+     * The method normalizes both inputs to lowercase before delegating
+     * to the Boyer-Moore implementation.
+     *
+     * @param text    the document or field content to be searched
+     * @param pattern the search term or keyword to locate
+     * @return the total number of occurrences (0 if inputs are invalid)
      */
     public static int countOccurrences(String text, String pattern) {
-        if (text == null || pattern == null || pattern.trim().isEmpty()) return 0;
-        return performBoyerMoore(text.toLowerCase(), pattern.toLowerCase().trim());
+        if (text == null || pattern == null || pattern.trim().isEmpty()) {
+            System.out.println("Error: Text or pattern cannot be null or empty for frequency counting.");
+            return 0;
+        }
+
+        String normalizedText = text.toLowerCase();
+        String normalizedPattern = pattern.toLowerCase().trim();
+
+
+        return performBoyerMoore(normalizedText, normalizedPattern);
     }
 
+    /**
+     * Core Boyer-Moore pattern matching implementation.
+     * Uses the bad-character heuristic to skip alignments intelligently,
+     * achieving sub-linear performance on average for natural-language text.
+     *
+     * @param text    the normalized text to search
+     * @param pattern the normalized pattern to find
+     * @return the total number of exact matches found
+     */
     public static int performBoyerMoore(String text, String pattern) {
-        int totalMatches = 0;
-        int textLength = text.length();
-        int patternLength = pattern.length();
+        int matchCount = 0;
+        int textLen = text.length();
+        int patternLen = pattern.length();
 
-        if (patternLength == 0) return 0;
+        if (patternLen == 0) {
+            return 0;
+        }
 
-        int[] badCharacterTable = createBadCharTable(pattern);
-        int shift = 0;
+        int[] badCharTable = createBadCharTable(pattern);
+        int currentPos = 0;
 
-        while (shift <= textLength - patternLength) {
-            int j = patternLength - 1;
-            while (j >= 0 && pattern.charAt(j) == text.charAt(shift + j)) {
-                j--;
+        while (currentPos <= textLen - patternLen) {
+            int patternIdx = patternLen - 1;
+
+            while (patternIdx >= 0 && pattern.charAt(patternIdx) == text.charAt(currentPos + patternIdx)) {
+                patternIdx--;
             }
-            if (j < 0) {
-                totalMatches++;
-                if (shift + patternLength < textLength) {
-                    shift += patternLength - badCharacterTable[text.charAt(shift + patternLength)];
+
+            if (patternIdx < 0) {
+                // Full match found
+                matchCount++;
+                if (currentPos + patternLen < textLen) {
+                    currentPos += patternLen - badCharTable[text.charAt(currentPos + patternLen)];
                 } else {
-                    shift += 1;
+                    currentPos += 1;
                 }
             } else {
-                int move = j - badCharacterTable[text.charAt(shift + j)];
-                shift += Math.max(1, move);
+                int shiftAmount = patternIdx - badCharTable[text.charAt(currentPos + patternIdx)];
+                currentPos += Math.max(1, shiftAmount);
             }
         }
-        return totalMatches;
+
+        return matchCount;
     }
 
+    /**
+     * Builds the bad-character shift table used by the Boyer-Moore algorithm.
+     * For each possible character, the table stores the rightmost occurrence
+     * index within the pattern (or -1 if the character does not appear).
+     *
+     * @param pattern the pattern for which the shift table is constructed
+     * @return the 256-entry bad-character table (ASCII)
+     */
     public static int[] createBadCharTable(String pattern) {
         final int ASCII_SIZE = 256;
-        int[] table = new int[ASCII_SIZE];
-        for (int i = 0; i < ASCII_SIZE; i++) table[i] = -1;
-        for (int i = 0; i < pattern.length(); i++) {
-            table[pattern.charAt(i)] = i;
+        int[] badCharTable = new int[ASCII_SIZE];
+
+        // Initialize all positions to -1 (character not in pattern)
+        for (int i = 0; i < ASCII_SIZE; i++) {
+            badCharTable[i] = -1;
         }
-        return table;
+
+        // Record the rightmost occurrence of each character
+        for (int i = 0; i < pattern.length(); i++) {
+            badCharTable[pattern.charAt(i)] = i;
+        }
+
+        return badCharTable;
     }
 }

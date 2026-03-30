@@ -1,8 +1,12 @@
 package features;
 
 /**
- * UserPreferences captures the user's requirements for phone recommendations.
- * This includes budget constraints, desired specifications, and feature preferences.
+ * UserPreferences encapsulates all user-specified requirements and preferences
+ * for generating personalized smartphone recommendations. It includes budget
+ * constraints, minimum hardware specifications, and optional feature preferences.
+ *
+ * This class is used by RecommendationEngine to filter and score phones
+ * according to user needs.
  */
 public class UserPreferences {
 
@@ -10,7 +14,7 @@ public class UserPreferences {
     private double minBudget;
     private double maxBudget;
 
-    // Preferred specifications
+    // Minimum hardware specifications
     private int minRamGb;
     private int minStorageGb;
     private double minDisplaySize;
@@ -18,20 +22,22 @@ public class UserPreferences {
     private int minMainCameraMp;
     private int minSelfiesCameraMp;
 
-    // Feature preferences (must-have features)
+    // Optional feature preferences
     private boolean needsHeadphoneJack;
     private boolean needsWaterResistance;
     private boolean needsHighRefreshRate;
 
-    // Priority weights (1-5 scale)
-    private int budgetPriority = 3;      // Default priority
+    // Priority weights (1-5 scale) for scoring customization
+    private int budgetPriority = 3;
     private int ramPriority = 3;
     private int storagePriority = 3;
     private int cameraPriority = 3;
     private int batteryPriority = 3;
     private int displayPriority = 3;
 
-    // Constructor with defaults
+    /**
+     * Constructs a UserPreferences object with sensible default values.
+     */
     public UserPreferences() {
         this.minBudget = 0;
         this.maxBudget = 10000;
@@ -46,7 +52,8 @@ public class UserPreferences {
         this.needsHighRefreshRate = false;
     }
 
-    // Getters and Setters
+    // ==================== Getters and Setters ====================
+
     public double getMinBudget() {
         return minBudget;
     }
@@ -196,4 +203,3 @@ public class UserPreferences {
                 '}';
     }
 }
-

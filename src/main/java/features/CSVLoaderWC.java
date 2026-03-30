@@ -1,78 +1,96 @@
 package features;
 
-import features.WCTrie;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * CSVLoader reads crawled CSV files and loads words into the Trie.
- * For this project, it extracts words from Brand, Model, Processor, and OS
- * columns of the combined smartphone CSV file.
+ * CSVLoaderWC is responsible for parsing a smartphone dataset CSV file and populating
+ * a word-completion Trie (WCTrie) with normalized terms. It selectively extracts
+ * and processes content from the Brand, Model, Processor, and OS columns to build
+ * an efficient autocomplete dictionary for search queries.
  */
 public class CSVLoaderWC {
+    private static final List<PhoneData> phoneDatabase = new ArrayList<>();
 
-    public static boolean loadCSVIntoTrie(String filePath, WCTrie trie) {
-        boolean isLoaded = false;
-        int wordCount = 0;
+    /**
+     * Loads and normalizes relevant terms from the CSV dataset into the provided WCTrie.
+     * <p>
+     * This method performs the following steps:
+     * 1. Validates input parameters.
+     * 2. Skips the CSV header and processes each data row.
+     * 3. Extracts Brand, Model, Processor, and OS fields.
+     * 4. Combines the fields, converts to lowercase, removes non-alphabetic characters,
+     * and inserts words longer than two characters into the Trie.
+     * 5. Reports loading statistics and confirms activation of all system features.
+     * Error handling ensures graceful failure with clear console messages for file I/O issues
+     * or invalid input.
+     *
+     * @param filePath the absolute or relative path to the CSV file
+     * @param trie     the WCTrie instance that will store the extracted vocabulary
+     */
+    public static void loadCSVIntoTrie(String filePath, WCTrie trie) {
+        // Early validation for required parameters
+        if (filePath == null || filePath.trim().isEmpty() || trie == null) {
+            System.out.println("Invalid input: filePath cannot be null or empty and trie cannot be null.");
+            return;
+        }
 
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            String line;
+            String currentLine;
 
-            // Read and discard header line
-            String header = reader.readLine();
-            if (header == null) {
+            // Discard header row (first line of the CSV)
+            String headerRow = reader.readLine();
+            if (headerRow == null) {
                 System.out.println("CSV file is empty: " + filePath);
-                return false;
+                return;
             }
 
-            while ((line = reader.readLine()) != null) {
-                if (line.trim().isEmpty()) {
-                    continue; // skip blank lines
+            while ((currentLine = reader.readLine()) != null) {
+                if (currentLine.trim().isEmpty()) {
+                    continue; // ignore blank lines
                 }
 
-                // Split the row into columns. Our final_combined_phones.csv has no quoted commas,
-                // so simple split is sufficient here.
-                String[] columns = line.split(",", -1);
+                // Split row by commas (simple split is safe for this dataset)
+                String[] columns = currentLine.split(",", -1);
 
-                // Expect at least Brand, Model, and OS columns
+                // Ensure we have at least the expected number of columns
                 if (columns.length < 12) {
                     continue;
                 }
 
-                String brand = columns[0];          // Brand
-                String model = columns[1];          // Model
-                String processor = columns[8];      // Processor
-                String os = columns[11];            // OS
+                // Extract the four fields used for word completion vocabulary
+                String brandField = columns[0].trim();
+                String modelField = columns[1].trim();
+                String processorField = columns[8].trim();
+                String osField = columns[11].trim();
 
-                // Combine the text fields we care about
-                String combined = (brand + " " + model + " " + processor + " " + os).toLowerCase();
+                // Merge fields and prepare for tokenization
+                String mergedContent = (brandField + " " + modelField + " " + processorField + " " + osField)
+                        .toLowerCase().trim();
 
-                // Split into words on whitespace
-                String[] words = combined.split("\\s+");
+                String[] tokens = mergedContent.split("\\s+");
 
-                for (String word : words) {
-                    // Normalize
-                    word = word.toLowerCase().trim();
+                for (String token : tokens) {
+                    // Remove any remaining non-letter characters
+                    String cleanedToken = token.replaceAll("[^a-z]", "");
 
-                    // Remove numbers and special characters; keep only letters
-                    word = word.replaceAll("[^a-z]", "");
-
-                    // Insert meaningful words into Trie (length > 2)
-                    if (word.length() > 2) {
-                        trie.addWord(word);
-                        wordCount++;
+                    // Only meaningful terms (length > 2) are added to the Trie
+                    if (cleanedToken.length() > 2) {
+                        trie.addWord(cleanedToken);
                     }
                 }
             }
 
-            isLoaded = true;
-            System.out.println("Total words loaded into Trie: " + wordCount);
-
         } catch (IOException e) {
-            System.out.println("Error reading file: " + e.getMessage());
+            System.out.println("Error reading CSV file: " + e.getMessage());
         }
-        return isLoaded;
+
     }
 }

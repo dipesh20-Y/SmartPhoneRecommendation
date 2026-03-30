@@ -1,10 +1,10 @@
 package features;
 
 /**
- * PhoneData.java
- * Represents a single smartphone record.
- * Updated to include specSummary and Description for Frequency Count and Page Ranking.
- * All original logic preserved.
+ * PhoneData represents a single smartphone record with all its technical
+ * specifications, pricing details, and additional metadata.
+ * This class serves as the core data model used across the recommendation engine,
+ * search functionality, and scoring system.
  */
 public class PhoneData {
 
@@ -42,13 +42,14 @@ public class PhoneData {
     private String waterResistance;
     private String url;
 
-    // NEW FIELDS FOR FREQUENCY COUNT & PAGE RANKING
+    // Fields used for keyword search and page ranking
     private String specSummary;
     private String description;
 
     public PhoneData() {}
 
-    // ==================== GETTERS & SETTERS ====================
+    // ==================== GETTERS AND SETTERS ====================
+
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
@@ -133,19 +134,31 @@ public class PhoneData {
     public String getUrl() { return url; }
     public void setUrl(String url) { this.url = url; }
 
-    // NEW GETTERS / SETTERS
-    public String getSpecSummary() { return specSummary != null ? specSummary : ""; }
-    public void setSpecSummary(String specSummary) { this.specSummary = specSummary; }
+    public String getSpecSummary() {
+        return specSummary != null ? specSummary : "";
+    }
+    public void setSpecSummary(String specSummary) {
+        this.specSummary = specSummary;
+    }
 
-    public String getDescription() { return description != null ? description : ""; }
-    public void setDescription(String description) { this.description = description; }
+    public String getDescription() {
+        return description != null ? description : "";
+    }
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
+    /**
+     * Parses combined RAM and Storage information from the ramStorage field.
+     */
     private void parseRamStorage() {
         if (ramStorage == null || ramStorage.isEmpty()) return;
+
         String[] parts = ramStorage.split(",");
         if (parts.length > 0) {
             String firstPart = parts[0].trim();
             String[] tokens = firstPart.split("\\s+");
+
             for (String token : tokens) {
                 if (token.toUpperCase().contains("GB")) {
                     try {

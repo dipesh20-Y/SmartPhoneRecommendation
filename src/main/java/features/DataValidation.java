@@ -44,7 +44,7 @@ public class DataValidation {
         Matcher matcher = BUDGET_PATTERN.matcher(cleanedInput);
 
         if (matcher.matches()) {
-            System.out.println("Valid budget format: " + cleanedInput);
+//            System.out.println("Valid budget format: " + cleanedInput);
             return true;
         } else {
             System.out.println("Invalid budget format: \"" + cleanedInput + "\"");

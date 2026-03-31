@@ -103,9 +103,6 @@ public class RecommendationMain {
      */
     private static void getRecommendations() {
         try {
-            System.out.println("\nRecommendation Wizard");
-            System.out.println("(Data Validation + Pattern Finding Active)\n");
-
             UserPreferences prefs = new UserPreferences();
 
             System.out.println("--- Budget ---");
@@ -208,9 +205,9 @@ public class RecommendationMain {
      */
     private static void searchPhonesByKeyword() {
         try {
-            System.out.println("\nPhone Keyword Search\n");
+            System.out.println("\n======== Phone Keyword Search ========\n");
 
-            System.out.print("Enter keyword to search (e.g., 'pixel', 'ios'): ");
+            System.out.print("Enter keyword to search (e.g., 'Samsung', 'pixel', 'ios'): ");
             String keyword = scanner.nextLine().trim().toLowerCase();
 
             if (keyword.isEmpty()) {
@@ -221,13 +218,13 @@ public class RecommendationMain {
             // Basic input validation
             if (!keyword.matches("^[a-z0-9\\s\\-]+$")) {
                 System.out.println("Invalid search input.");
-                System.out.println("   Use only: letters, numbers, spaces, hyphens");
+                System.out.println("\tUse only: letters, numbers, spaces, hyphens");
                 return;
             }
             System.out.println("Input validation passed");
 
             // Pattern finding demonstration
-            System.out.println("\n[PATTERN FINDING] Analyzing search query...");
+            System.out.println("\nPATTERN FINDING: Analyzing search query...");
 
             Pattern brandPattern = Pattern.compile("(google|samsung|apple|oneplus|xiaomi|pixel|galaxy|iphone)", Pattern.CASE_INSENSITIVE);
             Matcher brandMatcher = brandPattern.matcher(keyword);
@@ -248,42 +245,35 @@ public class RecommendationMain {
             }
 
             // Primary search using Inverted Index + Frequency Count + Page Ranking
-            System.out.println("\n[INVERTED INDEX SEARCH] Searching phones...\n");
+            System.out.println("\nINVERTED INDEX SEARCH: Searching phones...\n");
             boolean found = engine.searchByKeyword(keyword);
+
+            // ==================== WORD COMPLETION ====================
+            // Always show word completion suggestions
+            if (wordCompletionTrie != null) {
+                List<String> completions = wordCompletionTrie.getWordsStartingWith(keyword);
+                if (!completions.isEmpty()) {
+                    System.out.println("\nWORD COMPLETION: Suggested words:");
+                    for (String completion : completions) {
+                        System.out.println("  - " + completion);
+                    }
+                } else {
+                    System.out.println("\nWORD COMPLETION: No suggestions found.");
+                }
+            }
+
+            // If inverted index found results, we are done
             if (found) {
                 return;
             }
 
-            // Word Completion fallback
-            if (wordCompletionTrie != null) {
-                List<String> completions = wordCompletionTrie.getWordsStartingWith(keyword);
-                if (!completions.isEmpty()) {
-                    System.out.println("\n[WORD COMPLETION] Suggestions:");
-                    for (String completion : completions) {
-                        System.out.println("  - " + completion);
-                    }
-
-                    System.out.print("\nType the corrected word to search with it, or type 'exit' to go back: ");
-                    String corrected = scanner.nextLine().trim().toLowerCase();
-
-                    if (corrected.equals("exit") || corrected.isEmpty()) {
-                        System.out.println("Returning to main menu.");
-                        return;
-                    }
-
-                    System.out.println("\n[WORD COMPLETION] Searching with: " + corrected);
-                    engine.searchByKeyword(corrected);
-                    return;
-                }
-            }
-
-            // Spell Checking fallback
+            // Spell Checking fallback (only if no results found)
             if (spellVocabulary == null || spellVocabulary.isEmpty()) {
-                System.out.println("\n[ SPELL CHECK ] No vocabulary loaded.");
+                System.out.println("\nSPELL CHECK: No vocabulary loaded.");
                 return;
             }
 
-            System.out.println("\n[ SPELL CHECK ] No direct matches. Checking spelling suggestions...");
+            System.out.println("\nSPELL CHECK: No direct matches. Checking spelling suggestions...");
 
             List<SuggestionOf_Words> suggestions = new ArrayList<>();
             for (String vocabWord : spellVocabulary) {
@@ -339,6 +329,7 @@ public class RecommendationMain {
                 System.out.println("   Price: $" + String.format("%.2f", phone.getPrice()));
                 System.out.println("   RAM: " + phone.getRamGb() + "GB | Storage: " + phone.getStorageGb() + "GB");
                 System.out.println("   Chipset: " + phone.getChipset());
+                System.out.println("   More Info: " + phone.getUrl());
                 System.out.println();
             }
 

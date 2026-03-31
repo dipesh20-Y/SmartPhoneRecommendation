@@ -67,11 +67,14 @@ public class RecommendationMain {
                             viewAllPhones();
                             break;
                         case "4":
+                             comparePhones();
+                             break;
+                        case "5":
                             System.out.println("\nThank you for using the Smartphone Recommendation System. Goodbye!");
                             scanner.close();
                             return;
                         default:
-                            System.out.println("Invalid choice. Please try 1-4.");
+                            System.out.println("Invalid choice. Please try 1-5.");
                     }
                 } catch (InputMismatchException e) {
                     System.out.println("Invalid input. Please enter a number (1-4).");
@@ -94,8 +97,9 @@ public class RecommendationMain {
         System.out.println("1. Get Phone Recommendations");
         System.out.println("2. Search Phones by Keyword");
         System.out.println("3. View All Available Phones");
-        System.out.println("4. Exit");
-        System.out.print("\nSelect an option (1-4): ");
+        System.out.println("4. Compare Phones");
+        System.out.println("5. Exit");
+        System.out.print("\nSelect an option (1-5): ");
     }
 
     /**
@@ -257,16 +261,23 @@ public class RecommendationMain {
             boolean found = engine.searchByKeyword(keyword);
 
             // ==================== WORD COMPLETION ====================
-            // Always show word completion suggestions
-            if (wordCompletionTrie != null) {
+            // ==================== WORD COMPLETION ====================
+            // Show Word Completion ONLY if no results were found
+            if (!found && wordCompletionTrie != null) {
                 List<String> completions = wordCompletionTrie.getWordsStartingWith(keyword);
                 if (!completions.isEmpty()) {
-                    System.out.println("\nWORD COMPLETION: Suggested words:");
-                    for (String completion : completions) {
-                        System.out.println("  - " + completion);
+                    System.out.println("\n[WORD COMPLETION] Suggested words:");
+                    for (String c : completions) {
+                        System.out.println("  - " + c);
                     }
-                } else {
-                    System.out.println("\nWORD COMPLETION: No suggestions found.");
+
+                    System.out.print("\nType the corrected word to search with it, or type 'exit' to go back: ");
+                    String corrected = scanner.nextLine().trim().toLowerCase();
+
+                    if (!corrected.equals("exit") && !corrected.isEmpty()) {
+                        engine.searchByKeyword(corrected);
+                    }
+                    return;
                 }
             }
 
@@ -513,5 +524,93 @@ public class RecommendationMain {
 
             doHeapify(recommendations, n, largest);
         }
+    }
+
+    // ==================== NEW FEATURE: Compare Phones ====================
+
+    private static void comparePhones() {
+        List<PhoneData> allPhones = engine.getAllPhones();
+        if (allPhones.isEmpty()) {
+            System.out.println("No phones available to compare.");
+            return;
+        }
+
+        System.out.println("\n=== Compare Phones ===");
+        System.out.println("Enter up to 4 phone numbers to compare (separated by space):");
+
+        // Show first 15 phones for easy selection
+        for (int i = 0; i < Math.min(15, allPhones.size()); i++) {
+            System.out.println((i+1) + ". " + allPhones.get(i).getName());
+        }
+
+        System.out.print("\nYour selection (e.g., 1 5 12): ");
+        String input = scanner.nextLine().trim();
+
+        String[] indices = input.split("\\s+");
+        List<PhoneData> selected = new ArrayList<>();
+
+        for (String idx : indices) {
+            try {
+                int index = Integer.parseInt(idx) - 1;
+                if (index >= 0 && index < allPhones.size()) {
+                    selected.add(allPhones.get(index));
+                }
+            } catch (Exception ignored) {}
+        }
+
+        if (selected.size() < 2) {
+            System.out.println("Please select at least 2 phones to compare.");
+            return;
+        }
+
+        if (selected.size() > 4) {
+            selected = selected.subList(0, 4);
+        }
+
+        displayComparisonTable(selected);
+    }
+
+    private static void displayComparisonTable(List<PhoneData> phones) {
+        System.out.println("\n" + "=".repeat(150));
+        System.out.println("                                      PHONE COMPARISON");
+        System.out.println("=".repeat(150));
+
+        // Shorten phone names for better display
+        String[] shortNames = new String[phones.size()];
+        for (int i = 0; i < phones.size(); i++) {
+            String name = phones.get(i).getName();
+            shortNames[i] = name.length() > 28 ? name.substring(0, 25) + "..." : name;
+        }
+
+        // Print header row (Phone names)
+        System.out.printf("%-35s", "Feature");
+        for (String name : shortNames) {
+            System.out.printf("%-30s", name);
+        }
+        System.out.println();
+        System.out.println("-".repeat(150));
+
+        // Print each feature as a row
+        printRow("Price", phones, p -> "$" + String.format("%.2f", p.getPrice()));
+        printRow("RAM", phones, p -> p.getRamGb() + " GB");
+        printRow("Storage", phones, p -> p.getStorageGb() + " GB");
+        printRow("Display Size", phones, p -> String.format("%.1f", p.getDisplaySize()) + "\"");
+        printRow("Battery", phones, p -> p.getBatteryMah() + " mAh");
+        printRow("Main Camera", phones, PhoneData::getMainCamera);
+        printRow("OS", phones, PhoneData::getOs);
+        printRow("Headphone Jack", phones, p -> p.hasHeadphoneJack() ? "Yes" : "No");
+        printRow("Water Resistance", phones, p ->
+                (p.getWaterResistance() != null && !p.getWaterResistance().equalsIgnoreCase("No")) ? "Yes" : "No");
+
+        System.out.println("=".repeat(150));
+    }
+
+    private static void printRow(String feature, List<PhoneData> phones, java.util.function.Function<PhoneData, String> getter) {
+        System.out.printf("%-35s", feature);
+        for (PhoneData p : phones) {
+            String value = getter.apply(p);
+            System.out.printf("%-30s", value);
+        }
+        System.out.println();
     }
 }

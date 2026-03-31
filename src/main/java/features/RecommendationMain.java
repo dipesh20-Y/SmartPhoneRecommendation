@@ -153,6 +153,14 @@ public class RecommendationMain {
                 System.out.println("Try adjusting your preferences or selecting from available options.");
                 return;
             }
+            // New Feature: Sort by Price using Heap Sort
+            System.out.print("\nSort recommendations by price? (y/n): ");
+            String sortChoice = scanner.nextLine().trim().toLowerCase();
+
+            if (sortChoice.equals("y") || sortChoice.equals("yes")) {
+                heapSortByPrice(recommendations);
+                System.out.println("Recommendations sorted by price (lowest first) using Heap Sort.");
+            }
 
             displayRecommendations(recommendations);
 
@@ -456,6 +464,54 @@ public class RecommendationMain {
             } catch (NumberFormatException e) {
                 System.out.println("Please enter a valid camera option.");
             }
+        }
+    }
+
+    // Helper class for Merge Sort by price
+    /**
+     * Heap Sort implementation to sort recommendations by price (lowest to highest)
+     */
+    private static void heapSortByPrice(List<Recommendation> recommendations) {
+        int n = recommendations.size();
+
+        // Build heap
+        for (int i = n / 2 - 1; i >= 0; i--) {
+            doHeapify(recommendations, n, i);
+        }
+
+        // Extract elements from heap one by one
+        for (int i = n - 1; i > 0; i--) {
+            // Swap root with last element
+            Recommendation temp = recommendations.get(0);
+            recommendations.set(0, recommendations.get(i));
+            recommendations.set(i, temp);
+
+            // Heapify the reduced heap
+            doHeapify(recommendations, i, 0);
+        }
+    }
+
+    private static void doHeapify(List<Recommendation> recommendations, int n, int i) {
+        int largest = i;
+        int left = 2 * i + 1;
+        int right = 2 * i + 2;
+
+        if (left < n && recommendations.get(left).getPhone().getPrice() >
+                recommendations.get(largest).getPhone().getPrice()) {
+            largest = left;
+        }
+
+        if (right < n && recommendations.get(right).getPhone().getPrice() >
+                recommendations.get(largest).getPhone().getPrice()) {
+            largest = right;
+        }
+
+        if (largest != i) {
+            Recommendation swap = recommendations.get(i);
+            recommendations.set(i, recommendations.get(largest));
+            recommendations.set(largest, swap);
+
+            doHeapify(recommendations, n, largest);
         }
     }
 }

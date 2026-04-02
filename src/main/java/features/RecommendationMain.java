@@ -377,8 +377,9 @@ public class RecommendationMain {
             String extracted = input.replace("$", "").replace(",", "").trim();
             try {
                 double value = Double.parseDouble(extracted);
-                if (value > 0) return value;
-                else System.out.println("Please enter a positive number.");
+
+                if (value >= 221 && value <= 1899) return value;
+                else System.out.println("Please enter a budget between the price range.");
             } catch (NumberFormatException e) {
                 System.out.println("Budget" + " must be a valid number.");
             }
@@ -535,12 +536,18 @@ public class RecommendationMain {
             return;
         }
 
+        //Create copy and sort so latest phones appear first ===
+        List<PhoneData> sortedPhones = new ArrayList<>(allPhones);
+        sortedPhones.sort((p1, p2) -> Double.compare(p2.getPrice(), p1.getPrice())); // Higher price first
+
         System.out.println("\n=== Compare Phones ===");
         System.out.println("Enter up to 4 phone numbers to compare (separated by space):");
 
-        // Show first 15 phones for easy selection
-        for (int i = 0; i < Math.min(15, allPhones.size()); i++) {
-            System.out.println((i+1) + ". " + allPhones.get(i).getName());
+        // Show first 15 phones (latest first)
+        for (int i = 0; i < Math.min(15, sortedPhones.size()); i++) {
+            PhoneData phone = sortedPhones.get(i);
+            System.out.printf("%d. %-50s $%.2f%n",
+                    (i + 1), phone.getName(), phone.getPrice());
         }
 
         System.out.print("\nYour selection (e.g., 1 5 12): ");
@@ -552,8 +559,8 @@ public class RecommendationMain {
         for (String idx : indices) {
             try {
                 int index = Integer.parseInt(idx) - 1;
-                if (index >= 0 && index < allPhones.size()) {
-                    selected.add(allPhones.get(index));
+                if (index >= 0 && index < sortedPhones.size()) {
+                    selected.add(sortedPhones.get(index));
                 }
             } catch (Exception ignored) {}
         }
@@ -582,7 +589,7 @@ public class RecommendationMain {
             shortNames[i] = name.length() > 28 ? name.substring(0, 25) + "..." : name;
         }
 
-        // Print header row (Phone names)
+        // Print header row
         System.out.printf("%-35s", "Feature");
         for (String name : shortNames) {
             System.out.printf("%-30s", name);
@@ -609,7 +616,7 @@ public class RecommendationMain {
         System.out.printf("%-35s", feature);
         for (PhoneData p : phones) {
             String value = getter.apply(p);
-            System.out.printf("%-30s", value);
+            System.out.printf("%-30s", value != null ? value : "N/A");
         }
         System.out.println();
     }
